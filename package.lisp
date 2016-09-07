@@ -7,4 +7,4 @@
 (in-package #:cl-user)
 (defpackage #:3d-matrices
   (:nicknames #:org.shirakumo.flare.matrix)
-  (:use #:cl))
+  (:use #:cl #:3d-vectors))

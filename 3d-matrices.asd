@@ -16,6 +16,7 @@
   :components ((:file "package")
                (:file "toolkit")
                (:file "struct")
+               (:file "ops")
                (:file "documentation"))
   :depends-on (:documentation-utils
                :3d-vectors))
