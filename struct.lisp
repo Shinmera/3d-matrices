@@ -18,7 +18,7 @@
   (let ((el (gensym "ELEMENTS")))
     `(make-array ,size :element-type ',*float-type*
                        :initial-element ,(ensure-float 0)
-                       :initial-elements (load-time-value
+                       :initial-contents (load-time-value
                                           (let ((,el ,elements))
                                             (etypecase ,el
                                               (null (ensure-float 0))
