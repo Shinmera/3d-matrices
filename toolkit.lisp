@@ -12,6 +12,13 @@
     #+3d-vectors-double-floats 'double-float
     #-3d-vectors-double-floats 'single-float))
 
+;; We choose this limit in order to ensure that matrix indices
+;; always remain within fixnum range. I'm quite certain you don't
+;; want to use matrices as big as this allows anyway. You'll want
+;; BLAS/LAPACK and/or someone much smarter than me for that.
+(defvar *matrix-limit* (min (floor (sqrt array-dimension-limit))
+                            (floor (sqrt most-positive-fixnum))))
+
 (defmacro define-ofun (name args &body body)
   `(defun ,name ,args
      (declare (optimize (compilation-speed 0) (debug 0) (safety 1) (space 3) speed))

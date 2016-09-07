@@ -15,6 +15,7 @@
   :serial T
   :components ((:file "package")
                (:file "toolkit")
+               (:file "struct")
                (:file "documentation"))
   :depends-on (:documentation-utils
                :3d-vectors))
