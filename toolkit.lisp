@@ -16,8 +16,12 @@
 ;; always remain within fixnum range. I'm quite certain you don't
 ;; want to use matrices as big as this allows anyway. You'll want
 ;; BLAS/LAPACK and/or someone much smarter than me for that.
-(defvar *matrix-limit* (min (floor (sqrt array-dimension-limit))
-                            (floor (sqrt most-positive-fixnum))))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defvar *matrix-limit* (min (floor (sqrt array-dimension-limit))
+                              (floor (sqrt most-positive-fixnum)))))
+
+(deftype mat-dim ()
+  '(integer 0 #.(1- *matrix-limit*)))
 
 (defmacro define-ofun (name args &body body)
   `(defun ,name ,args
