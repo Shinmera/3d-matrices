@@ -121,9 +121,9 @@
        (declaim (ftype (function ((or mat real) &rest (or mat real)) boolean) ,name))
        (define-ofun ,2mat-name (a b)
          (%2mat-op a b ,op and and and
-             (loop for i from 0 below (* (mcols a) (mrows a))
+             (loop for i from 0 below (* (%cols a) (%rows a))
                    always (,op (mirefn a i) (mirefn b i)))
-             (loop for i from 0 below (* (mcols a) (mrows a))
+             (loop for i from 0 below (* (%cols a) (%rows a))
                    always (,op (mirefn a i) b))))
        (define-ofun ,name (val &rest vals)
          (loop for prev = val then next
@@ -143,6 +143,80 @@
 (define-matcomp m> >)
 (define-matcomp m<= <=)
 (define-matcomp m>= >=)
+
+(defmacro define-matop (name nname op)
+  (let ((2mat-name (intern (format NIL "~a-~a" '2mat name))))
+    `(progn
+       (declaim (inline ,name ,2mat-name))
+       (declaim (ftype (function ((or vec real) &rest (or vec real)) vec) ,name))
+       (declaim (ftype (function ((or vec real) (or vec real)) vec) ,2mat-name))
+       (define-ofun ,2mat-name (a b)
+         (%2mat-op a b ,op mat mat mat
+             (let ((mat (matn (%cols a) (%rows a))))
+               (loop for i from 0 below (* (%cols mat) (%rows mat))
+                     do (setf (mirefn mat i) (,op (mirefn a i) (mirefn b i)))))
+             (let ((mat (matn (%cols a) (%rows a))))
+               (loop for i from 0 below (* (%cols mat) (%rows mat))
+                     do (setf (mirefn mat i) (,op (mirefn a i) b))))))
+       (define-ofun ,name (val &rest vals)
+         (cond ((cdr vals)
+                (apply #',nname (,2mat-name val (first vals)) (rest vals)))
+               (vals (,2mat-name val (first vals)))
+               (T (mapply val ,op))))
+       (define-compiler-macro ,name (val &rest vals)
+         (case (length vals)
+           (0 `(vapply ,val ,',op))
+           (1 `(,',2mat-name ,val ,(first vals)))
+           (T `(,',nname (,',2mat-name ,val ,(first val)) ,@(rest vals))))))))
+
+(defmacro define-nmatop (name op)
+  (let ((2mat-name (intern (format NIL "~a-~a" '2mat name))))
+    `(progn
+       (declaim (inline ,name ,2mat-name))
+       (declaim (ftype (function ((or vec real) &rest (or vec real)) vec) ,name))
+       (declaim (ftype (function ((or vec real) (or vec real)) vec) ,2mat-name))
+       (define-ofun ,2mat-name (a b)
+         (%2mat-op a b ,op mat mat mat
+             (loop for i from 0 below (* (%cols a) (%rows a))
+                   do (setf (mirefn a i) (,op (mirefn a i) (mirefn b i))))
+             (loop for i from 0 below (* (%cols a) (%rows a))
+                   do (setf (mirefn a i) (,op (mirefn a i) b)))))
+       (define-ofun ,name (val &rest vals)
+         (if vals
+             (loop for v in vals
+                   do (,2mat-name val v)
+                   finally (return val))
+             (mapplfy val ,op)))
+       (define-compiler-macro ,name (val &rest vals)
+         (case (length vals)
+           (0 `(vapplyf ,val ,',op))
+           (1 `(,',2mat-name ,val ,(first vals)))
+           (T `(,',name (,',2mat-name ,val ,(first val)) ,@(rest vals))))))))
+
+(define-matop m+ nm+ +)
+(define-matop m- nm- -)
+(define-matop m* nm* *)
+(define-matop m/ nm/ /)
+(define-nmatop nm+ +)
+(define-nmatop nm- -)
+(define-nmatop nm* *)
+(define-nmatop nm/ /)
+
+(defun mapply (mat op)
+  (etypecase mat
+    (mat2 (let ((m (mat2))) (map-into (%marr2 m) op (%marr2 mat)) m))
+    (mat3 (let ((m (mat3))) (map-into (%marr3 m) op (%marr3 mat)) m))
+    (mat4 (let ((m (mat4))) (map-into (%marr4 m) op (%marr4 mat)) m))
+    (matn (let ((m (matn (%cols mat) (%rows mat))))
+            (map-into (%marrn m) op (%marrn mat))
+            m))))
+
+(defun mapplyf (mat op)
+  (etypecase mat
+    (mat2 (map-into (%marr2 mat) op (%marr2 mat)) mat)
+    (mat3 (map-into (%marr3 mat) op (%marr3 mat)) mat)
+    (mat4 (map-into (%marr4 mat) op (%marr4 mat)) mat)
+    (matn (map-into (%marrn mat) op (%marrn mat)) mat)))
 
 ;; TODO
 ;; + - * /
