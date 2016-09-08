@@ -269,15 +269,13 @@
                 (* (e 0 1) (e 1 3) (e 2 0) (e 3 2)) (* (e 0 3) (e 1 0) (e 2 1) (e 3 2))
                 (* (e 0 0) (e 1 1) (e 2 3) (e 3 2)) (* (e 0 2) (e 1 1) (e 2 0) (e 3 3))
                 (* (e 0 0) (e 1 2) (e 2 1) (e 3 3)) (* (e 0 1) (e 1 0) (e 2 2) (e 3 3)))))
-    (matn (multiple-value-bind (L U P s) (mlu m)
+    (matn (multiple-value-bind (LU P s) (mlu m)
             (declare (ignore P))
-            (with-fast-matrefs ((l L (%rows L))
-                                (u U (%rows U)))
+            (with-fast-matref (lu LU (%rows LU))
               (loop for det = #.(ensure-float 1) then (* (expt -1.0 (the integer s))
                                                          (the #.*float-type* det)
-                                                         (l i i)
-                                                         (u i i))
-                    for i from 0 below (%rows L)
+                                                         (lu i i))
+                    for i from 0 below (%rows LU)
                     finally (return det)))))))
 
 ;; More of the same.
@@ -443,41 +441,42 @@
 
 (declaim (ftype (function (mat) (values mat mat-dim)) mpivot))
 (defun mpivot (m)
-  ())
+  ;; FIXME!!
+  (values (midentity (mrows m)) 0))
 
-(declaim (ftype (function (mat) (values mat mat mat mat-dim)) mlu))
+(declaim (ftype (function (mat) (values mat mat mat-dim)) mlu))
 (defun mlu (m)
   (etypecase m
     (mat2 (with-fast-matref (e m 2)
             (if (= 0 (mcref m 0 0))
                 (if (= 0 (mcref m 1 0))
                     (error "Matrix is singular.")
-                    (values (mat 1 0 (/ (e 0 0) (e 1 0)))
-                            (mat (e 1 0) (e 1 1) 0 (- (e 0 1) (/ (* (e 0 0) (e 1 1)) (e 1 0))))
-                            (mat 0 1 1 0) 1))
-                (values (mat 1 0 (/ (e 1 0) (e 0 0)))
-                        (mat (e 0 0) (e 0 1) 0 (- (e 1 1) (/ (* (e 0 1) (e 1 0)) (e 0 0))))
-                        (mat 1 0 0 1) 0))))
+                    (values (mat (e 1 0) (e 1 1)
+                                 (/ (e 0 0) (e 1 0)) (- (e 0 1) (/ (* (e 0 0) (e 1 1)) (e 1 0))))
+                            (mat 0 1 1 0)
+                            1))
+                (values (mat (e 0 0) (e 0 1) (/ (e 1 0) (e 0 0))
+                             (- (e 1 1) (/ (* (e 0 1) (e 1 0)) (e 0 0))))
+                        (mat 1 0 0 1)
+                        0))))
     ;; Not worth the pain to inline it anymore. Just do the generic variant.
-    (matn
-     (let* ((c (%rows m))
-            (L (midentity c))
-            (U (matn c c)))
+    ;; We're using the Crout method for LU decomposition.
+    ;; See https://en.wikipedia.org/wiki/Crout_matrix_decomposition
+    (mat
+     (let* ((c (%rows m)))
        (multiple-value-bind (P s) (mpivot m)
-         (let ((M (m* M P))) ;; Can I avoid creating this?
-           (with-fast-matrefs ((l L c)
-                               (u U c)
-                               (m M c))
+         (let ((LU (m* m P)))
+           (with-fast-matrefs ((lu LU c))
              (dotimes (j c)
-               (loop for i from j below c
+               (loop for i from 0 to j
+                     for sum = (loop for k from 0 below i
+                                     sum (* (lu i k) (lu k j)))
+                     do (setf (lu i j) (- (lu i j) sum)))
+               (loop for i from (1+ j) below c
                      for sum = (loop for k from 0 below j
-                                     sum (* (l i k) (u k j)))
-                     do (setf (l i j) (- (m i j) sum)))
-               (loop for i from j below c
-                     for sum = (loop for k from 0 below j
-                                     sum (* (l j k) (u k i)))
-                     do (setf (u j i) (/ (- (m j i) sum) (l j j)))))))
-         (values L U P s))))))
+                                     sum (* (lu i k) (lu k j)))
+                     do (setf (lu i j) (/ (- (lu i j) sum) (lu j j))))))
+           (values LU P s)))))))
 
 ;; TODO
 ;; QR, eigenvalues
