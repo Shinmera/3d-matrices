@@ -31,6 +31,7 @@
 (declaim (inline ensure-float))
 (declaim (ftype (function (real) #.*float-type*)))
 (defun ensure-float (thing)
+  (declare (optimize (speed 1)))
   (coerce thing '#.*float-type*))
 
 (defun ensure-float-param (val env)
@@ -38,4 +39,11 @@
       (typecase val
         (real (ensure-float val))
         (T `(load-time-value (ensure-float ,val))))
-      `(coerce ,val ',*float-type*)))
+      `(locally (declare (optimize (speed 1)))
+         (coerce ,val ',*float-type*))))
+
+(declaim (inline ensure-function))
+(defun ensure-function (functionish)
+  (etypecase functionish
+    (function functionish)
+    (symbol (fdefinition functionish))))
