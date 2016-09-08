@@ -14,8 +14,8 @@
 
 (defmacro %proper-array (size elements)
   `(etypecase ,elements
-     (null `(%mka ,size :element ,0))
-     (real `(%mka ,size :element ,elements))
+     (null (%mka ,size :element ,0))
+     (real (%mka ,size :element ,elements))
      (sequence (let ((array (%mka ,size :element 0)))
                  (map-into array #'ensure-float ,elements)))))
 
@@ -55,14 +55,14 @@
   (aref (%marr2 mat) i))
 
 (defsetf miref2 (&environment env mat i) (value)
-  `(setf (aref (%miref2 ,mat) ,i) ,(ensure-float-param value env)))
+  `(setf (aref (%marr2 ,mat) ,i) ,(ensure-float-param value env)))
 
 (declaim (inline mcref2))
 (declaim (ftype (function (mat2 (integer 0 1) (integer 0 1)) #.*float-type*) mcref2))
-(define-ofun mcref2 (mat x y)
+(define-ofun mcref2 (mat y x)
   (aref (%marr2 mat) (+ (* y 2) x)))
 
-(defsetf mcref2 (&environment env mat x y) (value)
+(defsetf mcref2 (&environment env mat y x) (value)
   `(setf (aref (%marr2 ,mat) (+ (* ,y 2) ,x)) ,(ensure-float-param value env)))
 
 (define-ofun mat2 (&optional elements)
@@ -92,14 +92,14 @@
   (aref (%marr3 mat) i))
 
 (defsetf miref3 (&environment env mat i) (value)
-  `(setf (aref (%miref3 ,mat) ,i) ,(ensure-float-param value env)))
+  `(setf (aref (%marr3 ,mat) ,i) ,(ensure-float-param value env)))
 
 (declaim (inline mcref3))
 (declaim (ftype (function (mat3 (integer 0 2) (integer 0 2)) #.*float-type*) mcref3))
 (define-ofun mcref3 (mat x y)
   (aref (%marr3 mat) (+ (* y 3) x)))
 
-(defsetf mcref3 (&environment env mat x y) (value)
+(defsetf mcref3 (&environment env mat y x) (value)
   `(setf (aref (%marr3 ,mat) (+ (* ,y 3) ,x)) ,(ensure-float-param value env)))
 
 (define-ofun mat3 (&optional elements)
@@ -129,14 +129,14 @@
   (aref (%marr4 mat) i))
 
 (defsetf miref4 (&environment env mat i) (value)
-  `(setf (aref (%miref4 ,mat) ,i) ,(ensure-float-param value env)))
+  `(setf (aref (%marr4 ,mat) ,i) ,(ensure-float-param value env)))
 
 (declaim (inline mcref4))
 (declaim (ftype (function (mat4 (integer 0 3) (integer 0 3)) #.*float-type*) mcref4))
-(define-ofun mcref4 (mat x y)
+(define-ofun mcref4 (mat y x)
   (aref (%marr4 mat) (+ (* y 3) x)))
 
-(defsetf mcref4 (&environment env mat x y) (value)
+(defsetf mcref4 (&environment env mat y x) (value)
   `(setf (aref (%marr4 ,mat) (+ (* ,y 3) ,x)) ,(ensure-float-param value env)))
 
 (define-ofun mat4 (&optional elements)
@@ -155,11 +155,11 @@
   `(mat4 ,(%marr4 m)))
 
 (defstruct (matn (:conc-name NIL)
-                   (:constructor %matn (%cols %rows %marrn))
-                   (:copier mcopyn)
-                   (:predicate matn-p))
-  (%cols NIL :type mat-dim)
+                 (:constructor %matn (%rows %cols %marrn))
+                 (:copier mcopyn)
+                 (:predicate matn-p))
   (%rows NIL :type mat-dim)
+  (%cols NIL :type mat-dim)
   (%marrn NIL :type (simple-array #.*float-type*)))
 
 (declaim (inline mirefn))
@@ -168,24 +168,24 @@
   (aref (%marrn mat) i))
 
 (defsetf mirefn (&environment env mat i) (value)
-  `(setf (aref (%mirefn ,mat) ,i) ,(ensure-float-param value env)))
+  `(setf (aref (%marrn ,mat) ,i) ,(ensure-float-param value env)))
 
 (declaim (inline mcrefn))
 (declaim (ftype (function (matn mat-dim mat-dim) #.*float-type*) mcrefn))
-(define-ofun mcrefn (mat x y)
+(define-ofun mcrefn (mat y x)
   (aref (%marrn mat) (+ (* y (%cols mat)) x)))
 
-(defsetf mcrefn (&environment env mat x y) (value)
+(defsetf mcrefn (&environment env mat y x) (value)
   `(setf (aref (%marrn ,mat) (+ (* ,y (%cols ,mat)) ,x)) ,(ensure-float-param value env)))
 
-(define-ofun matn (c r &optional elements)
-  (check-type c mat-dim)
+(define-ofun matn (r c &optional elements)
   (check-type r mat-dim)
-  (%matn c r (%proper-array (* c r) elements)))
+  (check-type c mat-dim)
+  (%matn c r (%proper-array (* r c) elements)))
 
-(define-compiler-macro matn (&whole whole &environment env c r &optional elements)
+(define-compiler-macro matn (&whole whole &environment env r c &optional elements)
   (cond ((constantp elements env)
-         `(%matn ,c ,r ,(%proper-array-form `(* ,c ,r) elements)))
+         `(%matn ,r ,c ,(%proper-array-form `(* ,c ,r) elements)))
         (T whole)))
 
 (defmethod print-object ((m matn) stream)
@@ -193,7 +193,7 @@
 
 (defmethod make-load-form ((m matn) &optional env)
   (declare (ignore env))
-  `(matn ,(%cols m) ,(%rows m) ,(%marrn m)))
+  `(matn ,(%rows m) ,(%cols m) ,(%marrn m)))
 
 ;; Compat
 (deftype mat ()
@@ -210,12 +210,12 @@
 
 (declaim (inline mcref))
 (declaim (ftype (function (mat mat-dim mat-dim) #.*float-type*) mcref))
-(defun mcref (mat x y)
+(defun mcref (mat y x)
   (etypecase mat
-    (mat2 (mcref2 mat x y))
-    (mat3 (mcref3 mat x y))
-    (mat4 (mcref4 mat x y))
-    (matn (mcrefn mat x y))))
+    (mat2 (mcref2 mat y x))
+    (mat3 (mcref3 mat y x))
+    (mat4 (mcref4 mat y x))
+    (matn (mcrefn mat y x))))
 
 (declaim (inline mcols))
 (declaim (ftype (function (mat) mat-dim) mcols))
@@ -249,18 +249,19 @@
            (matn rows rows vals))))))
 
 (define-compiler-macro mat (&whole whole &environment env &rest vals)
-  (let ((len (length vals)))
+  (let ((len (length vals))
+        (m (gensym "M")))
     (case len
-      (4 `(let ((m (mat2)))
+      (4 `(let ((,m (mat2)))
             ,@(loop for i from 0 below 4 for v in vals
-                    collect `(setf (miref2 m ,i) ,(ensure-float-param v env)))
-            m))
-      (9 `(let ((m (mat3)))
+                    collect `(setf (miref2 ,m ,i) ,(ensure-float-param v env)))
+            ,m))
+      (9 `(let ((,m (mat3)))
             ,@(loop for i from 0 below 9 for v in vals
-                    collect `(setf (miref3 m ,i) ,(ensure-float-param v env)))
-            m))
-      (16 `(let ((m (mat4)))
+                    collect `(setf (miref3 ,m ,i) ,(ensure-float-param v env)))
+            ,m))
+      (16 `(let ((,m (mat4)))
              ,@(loop for i from 0 below 16 for v in vals
-                     collect `(setf (miref4 m ,i) ,(ensure-float-param v env)))
-             m))
+                     collect `(setf (miref4 ,m ,i) ,(ensure-float-param v env)))
+             ,m))
       (T whole))))
