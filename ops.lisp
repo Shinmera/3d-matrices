@@ -6,11 +6,6 @@
 
 (in-package #:org.shirakumo.flare.matrix)
 
-;; So as to not reach inline expansion limits.
-(defmacro %c2 (y x) `(aref (%marr2 m) ,(+ x (* y 2))))
-(defmacro %c3 (y x) `(aref (%marr3 m) ,(+ x (* y 3))))
-(defmacro %c4 (y x) `(aref (%marr4 m) ,(+ x (* y 4))))
-
 (defmacro with-fast-matref ((accessor mat width) &body body)
   (let ((w (gensym "WIDTH")) (arr (gensym "ARRAY")))
     `(let ((,w ,width)
