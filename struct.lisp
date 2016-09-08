@@ -234,3 +234,33 @@
     (mat3 3)
     (mat4 4)
     (matn (%rows mat))))
+
+(defun mat (&rest vals)
+  (let ((len (length vals)))
+    (case len
+      (4 (mat2 vals))
+      (9 (mat3 vals))
+      (16 (mat4 vals))
+      (T (let* ((sqrt (sqrt len))
+                (rows (floor sqrt)))
+           (unless (= rows sqrt)
+             (error "Number of values ~a is not square-- don't know how to turn into matrix. Please use MATN and specify the rows and columns explicitly."
+                    len))
+           (matn rows rows vals))))))
+
+(define-compiler-macro mat (&whole whole &environment env &rest vals)
+  (let ((len (length vals)))
+    (case len
+      (4 `(let ((m (mat2)))
+            ,@(loop for i from 0 below 4 for v in vals
+                    collect `(setf (miref2 m ,i) ,(ensure-float-param v env)))
+            m))
+      (9 `(let ((m (mat3)))
+            ,@(loop for i from 0 below 9 for v in vals
+                    collect `(setf (miref3 m ,i) ,(ensure-float-param v env)))
+            m))
+      (16 `(let ((m (mat4)))
+             ,@(loop for i from 0 below 16 for v in vals
+                     collect `(setf (miref4 m ,i) ,(ensure-float-param v env)))
+             m))
+      (T whole))))
