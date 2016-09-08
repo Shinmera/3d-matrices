@@ -16,6 +16,7 @@
   :components ((:file "package")
                (:file "toolkit")
                (:file "struct")
+               (:file "iterate")
                (:file "ops")
                (:file "documentation"))
   :depends-on (:documentation-utils
