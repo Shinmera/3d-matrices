@@ -6,6 +6,11 @@
 
 (in-package #:org.shirakumo.flare.matrix)
 
+;; So as to not reach inline expansion limits.
+(defmacro %m (size mat y x)
+  `(aref (,(find-symbol (format NIL "%~a~a" 'marr size)) ,mat)
+         ,(+ x (* y (ecase size (2 2) (3 3) (4 4))))))
+
 (define-ofun midentity (n)
   (case n
     (2 (mat2 '(1 0
@@ -87,24 +92,25 @@
         (m4 (if (listp m4) m4 (list m4))))
     (flet ((unroll (size ref &optional constant)
              (loop for i from 0 below size
-                   collect `(,c (,ref a ,i) ,(if constant 'b `(,ref b ,i))))))
+                   collect `(,c (aref (,ref a) ,i)
+                                ,(if constant 'b `(aref (,ref b) ,i))))))
       `(etypecase ,a
          (real (let ((,b (ensure-float ,a))
                      (,a ,b))
                  (etypecase ,a
-                   (mat4 (,@m4 ,@(unroll 16 'miref4 T)))
-                   (mat3 (,@m3 ,@(unroll 9 'miref3 T)))
-                   (mat2 (,@m2 ,@(unroll 4 'miref2 T)))
+                   (mat4 (,@m4 ,@(unroll 16 '%marr4 T)))
+                   (mat3 (,@m3 ,@(unroll 9 '%marr3 T)))
+                   (mat2 (,@m2 ,@(unroll 4 '%marr2 T)))
                    (matn ,mnr))))
          (mat4 (etypecase b
-                 (real (let ((b (ensure-float b))) (,@m4 ,@(unroll 16 'miref4 T))))
-                 (mat4 (,@m4 ,@(unroll 16 'miref4)))))
+                 (real (let ((b (ensure-float b))) (,@m4 ,@(unroll 16 '%marr4 T))))
+                 (mat4 (,@m4 ,@(unroll 16 '%marr4)))))
          (mat3 (etypecase b
-                 (real (let ((b (ensure-float b))) (,@m4 ,@(unroll 9 'miref3 T))))
-                 (mat3 (,@m3 ,@(unroll 9 'miref3)))))
+                 (real (let ((b (ensure-float b))) (,@m4 ,@(unroll 9 '%marr3 T))))
+                 (mat3 (,@m3 ,@(unroll 9 '%marr3)))))
          (mat2 (etypecase b
-                 (real (let ((b (ensure-float b))) (,@m4 ,@(unroll 4 'miref2 T))))
-                 (mat2 (,@m2 ,@(unroll 4 'miref2)))))
+                 (real (let ((b (ensure-float b))) (,@m4 ,@(unroll 4 '%marr2 T))))
+                 (mat2 (,@m2 ,@(unroll 4 '%marr2)))))
          (matn (etypecase b
                  (real (let ((b (ensure-float b)))
                          ,mnr))
@@ -148,24 +154,24 @@
   (let ((2mat-name (intern (format NIL "~a-~a" '2mat name))))
     `(progn
        (declaim (inline ,name ,2mat-name))
-       (declaim (ftype (function ((or vec real) &rest (or vec real)) vec) ,name))
-       (declaim (ftype (function ((or vec real) (or vec real)) vec) ,2mat-name))
+       (declaim (ftype (function ((or mat real) &rest (or mat real)) mat) ,name))
+       (declaim (ftype (function ((or mat real) (or mat real)) mat) ,2mat-name))
        (define-ofun ,2mat-name (a b)
          (%2mat-op a b ,op mat mat mat
                    (let ((mat (matn (%rows a) (%cols a))))
-                     (loop for i from 0 below (* (%cols mat) (%rows mat))
-                           do (setf (mirefn mat i) (,op (mirefn a i) (mirefn b i)))))
+                     (dotimes (i (* (%cols mat) (%rows mat)) mat)
+                       (setf (mirefn mat i) (,op (mirefn a i) (mirefn b i)))))
                    (let ((mat (matn (%rows a) (%cols a))))
-                     (loop for i from 0 below (* (%cols mat) (%rows mat))
-                           do (setf (mirefn mat i) (,op (mirefn a i) b))))))
+                     (dotimes (i (* (%cols mat) (%rows mat)) mat)
+                       (setf (mirefn mat i) (,op (mirefn a i) b))))))
        (define-ofun ,name (val &rest vals)
          (cond ((cdr vals)
                 (apply #',nname (,2mat-name val (first vals)) (rest vals)))
                (vals (,2mat-name val (first vals)))
-               (T (mapply val ,op))))
+               (T (mapply val #',op))))
        (define-compiler-macro ,name (val &rest vals)
          (case (length vals)
-           (0 `(vapply ,val ,',op))
+           (0 `(mapply ,val #',',op))
            (1 `(,',2mat-name ,val ,(first vals)))
            (T `(,',nname (,',2mat-name ,val ,(first val)) ,@(rest vals))))))))
 
@@ -173,23 +179,23 @@
   (let ((2mat-name (intern (format NIL "~a-~a" '2mat name))))
     `(progn
        (declaim (inline ,name ,2mat-name))
-       (declaim (ftype (function ((or vec real) &rest (or vec real)) vec) ,name))
-       (declaim (ftype (function ((or vec real) (or vec real)) vec) ,2mat-name))
+       (declaim (ftype (function ((or mat real) &rest (or mat real)) mat) ,name))
+       (declaim (ftype (function ((or mat real) (or mat real)) mat) ,2mat-name))
        (define-ofun ,2mat-name (a b)
          (%2mat-op a b ,op mat mat mat
-                   (loop for i from 0 below (* (%cols a) (%rows a))
-                         do (setf (mirefn a i) (,op (mirefn a i) (mirefn b i))))
-                   (loop for i from 0 below (* (%cols a) (%rows a))
-                         do (setf (mirefn a i) (,op (mirefn a i) b)))))
+                   (dotimes (i (* (%cols a) (%rows a)) a)
+                     (setf (mirefn a i) (,op (mirefn a i) (mirefn b i))))
+                   (dotimes (i (* (%cols a) (%rows a)) a)
+                     (setf (mirefn a i) (,op (mirefn a i) b)))))
        (define-ofun ,name (val &rest vals)
          (if vals
              (loop for v in vals
                    do (,2mat-name val v)
                    finally (return val))
-             (mapplfy val ,op)))
+             (mapplyf val #',op)))
        (define-compiler-macro ,name (val &rest vals)
          (case (length vals)
-           (0 `(vapplyf ,val ,',op))
+           (0 `(mapplyf ,val #',',op))
            (1 `(,',2mat-name ,val ,(first vals)))
            (T `(,',name (,',2mat-name ,val ,(first val)) ,@(rest vals))))))))
 

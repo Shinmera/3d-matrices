@@ -27,6 +27,8 @@
                     (listp (second elements))))
            `(%mka ,size :contents (load-time-value
                                    (map 'list #'ensure-float ,elements))))
+          ((null elements)
+           `(%mka ,size :element 0))
           ((numberp size)
            `(%mka ,size :contents (load-time-value
                                    (let ((,el ,elements))
@@ -254,14 +256,14 @@
     (case len
       (4 `(let ((,m (mat2)))
             ,@(loop for i from 0 below 4 for v in vals
-                    collect `(setf (miref2 ,m ,i) ,(ensure-float-param v env)))
+                    collect `(setf (aref (%marr2 ,m) ,i) ,(ensure-float-param v env)))
             ,m))
       (9 `(let ((,m (mat3)))
             ,@(loop for i from 0 below 9 for v in vals
-                    collect `(setf (miref3 ,m ,i) ,(ensure-float-param v env)))
+                    collect `(setf (aref (%marr3 ,m) ,i) ,(ensure-float-param v env)))
             ,m))
       (16 `(let ((,m (mat4)))
              ,@(loop for i from 0 below 16 for v in vals
-                     collect `(setf (miref4 ,m ,i) ,(ensure-float-param v env)))
+                     collect `(setf (aref (%marr4 ,m) ,i) ,(ensure-float-param v env)))
              ,m))
       (T whole))))

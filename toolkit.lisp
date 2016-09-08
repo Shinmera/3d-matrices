@@ -38,4 +38,4 @@
       (typecase val
         (real (ensure-float val))
         (T `(load-time-value (ensure-float ,val))))
-      `(ensure-float ,val)))
+      `(coerce ,val ',*float-type*)))
