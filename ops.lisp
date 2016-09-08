@@ -208,7 +208,9 @@
 (define-nmatop nm* *)
 (define-nmatop nm/ /)
 
-(defun mapply (mat op)
+(declaim (inline mapply))
+(declaim (ftype (function (mat (or symbol function)) mat) mapply))
+(define-ofun mapply (mat op)
   (etypecase mat
     (mat2 (let ((m (mat2))) (map-into (%marr2 m) op (%marr2 mat)) m))
     (mat3 (let ((m (mat3))) (map-into (%marr3 m) op (%marr3 mat)) m))
@@ -217,20 +219,18 @@
             (map-into (%marrn m) op (%marrn mat))
             m))))
 
-(defun mapplyf (mat op)
+(declaim (inline mapplyf))
+(declaim (ftype (function (mat (or symbol function)) mat) mapplyf))
+(define-ofun mapplyf (mat op)
   (etypecase mat
     (mat2 (map-into (%marr2 mat) op (%marr2 mat)) mat)
     (mat3 (map-into (%marr3 mat) op (%marr3 mat)) mat)
     (mat4 (map-into (%marr4 mat) op (%marr4 mat)) mat)
     (matn (map-into (%marrn mat) op (%marrn mat)) mat)))
 
-;; So as to not reach inline expansion limits.
-(defmacro %m (size mat y x)
-  `(aref (,(find-symbol (format NIL "%~a~a" 'marr size)) ,mat)
-         ,(+ x (* y (ecase size (2 2) (3 3) (4 4))))))
-
 ;; Juicy inlined crap.
-(defun mdet (m)
+(declaim (ftype (function (mat) #.*float-type*) mdet))
+(define-ofun mdet (m)
   (etypecase m
     (mat2 (- (* (%m 2 m 0 0) (%m 2 m 1 1))
              (* (%m 2 m 0 1) (%m 2 m 1 0))))
@@ -253,12 +253,13 @@
                 (* (%m 4 m 0 0) (%m 4 m 1 1) (%m 4 m 2 3) (%m 4 m 3 2)) (* (%m 4 m 0 2) (%m 4 m 1 1) (%m 4 m 2 0) (%m 4 m 3 3))
                 (* (%m 4 m 0 0) (%m 4 m 1 2) (%m 4 m 2 1) (%m 4 m 3 3)) (* (%m 4 m 0 1) (%m 4 m 1 0) (%m 4 m 2 2) (%m 4 m 3 3)))))
     (matn (multiple-value-bind (L U) (mlu m)
-            (loop for det = #.(ensure-float 1) then (* det (mcrefn L i i) (mcrefn U i i))
+            (loop for det = #.(ensure-float 1) then (* (the #.*float-type* det) (mcrefn L i i) (mcrefn U i i))
                   for i from 0 below (%rows L)
                   finally (return det))))))
 
 ;; More of the same.
-(defun minv (m)
+(declaim (ftype (function (mat) mat) minv))
+(define-ofun minv (m)
   (etypecase m
     (mat2 (let ((det (/ (mdet m))))
             (mat (* det (+ (%m 2 m 1 1)))
@@ -311,7 +312,8 @@
     (matn (let ((det (/ (mdet m))))
             (nm* (madj m) det)))))
 
-(defun mtranspose (m)
+(declaim (ftype (function (mat) mat) mtranspose))
+(define-ofun mtranspose (m)
   (etypecase m
     (mat2 (mat (%m 2 m 0 0) (%m 2 m 1 0)
                (%m 2 m 0 1) (%m 2 m 1 1)))
@@ -323,22 +325,26 @@
                (%m 4 m 0 2) (%m 4 m 1 2) (%m 4 m 2 2) (%m 4 m 3 2)
                (%m 4 m 0 3) (%m 4 m 1 3) (%m 4 m 2 3) (%m 4 m 3 3)))
     (matn (let ((r (matn (%rows m) (%cols m))))
-            (dotimes (y (%rows m))
-              (dotimes (x (%cols m) r)
+            (dotimes (y (%rows m) r)
+              (dotimes (x (%cols m))
                 (setf (mcrefn r x y) (mcrefn m y x))))))))
 
-(defun mtrace (m)
+(declaim (ftype (function (mat) #.*float-type*) minv))
+(define-ofun mtrace (m)
   (etypecase m
     (mat2 (+ (%m 2 m 0 0) (%m 2 m 1 1)))
     (mat3 (+ (%m 3 m 0 0) (%m 3 m 1 1) (%m 3 m 2 2)))
     (mat4 (+ (%m 4 m 0 0) (%m 4 m 1 1) (%m 4 m 2 2) (%m 4 m 3 3)))
-    (matn (loop for i from 0 below (min (%cols m) (%rows m))
-                sum (mcrefn m i i)))))
+    (matn (let ((sum #.(ensure-float 0)))
+            (dotimes (i (min (%cols m) (%rows m)) sum)
+              (setf sum (+ (mcrefn m i i) (the #.*float-type* sum))))))))
 
+(declaim (ftype (function (mat mat-dim mat-dim) #.*float-type*) mcoefficient))
 (defun mcoefficient (m y x)
   (error "COEFFICIENT CALCULATION NOT IMPLEMENTED YET. FIX IT, STUPID."))
 
-(defun mcof (m)
+(declaim (ftype (function (mat) mat) mcof))
+(define-ofun mcof (m)
   (etypecase m
     (mat2 (mat (mcoefficient m 0 0) (mcoefficient m 0 1)
                (mcoefficient m 1 0) (mcoefficient m 1 1)))
@@ -354,7 +360,8 @@
               (dotimes (x (%cols m) r)
                 (setf (mcrefn r y x) (mcoefficient m y x))))))))
 
-(defun madj (m)
+(declaim (ftype (function (mat) mat) madj))
+(define-ofun madj (m)
   (declare (inline mtranspose mcof))
   (etypecase m
     (mat2 (mat (+ (%m 2 m 1 1))
