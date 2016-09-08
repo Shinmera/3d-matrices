@@ -201,6 +201,15 @@
 (deftype mat ()
   `(or mat2 mat3 mat4 matn))
 
+(declaim (inline marr))
+(declaim (ftype (function (mat) (simple-array #.*float-type*)) marr))
+(defun marr (mat)
+  (etypecase mat
+    (mat2 (%marr2 mat))
+    (mat3 (%marr3 mat))
+    (mat4 (%marr4 mat))
+    (matn (%marrn mat))))
+
 (declaim (inline miref))
 (declaim (ftype (function (mat (integer 0 #.(expt *matrix-limit* 2))) #.*float-type*) miref))
 (defun miref (mat i)
