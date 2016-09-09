@@ -63,6 +63,7 @@
        ,@(when matn
            `((matn ,@matn))))))
 
+(declaim (ftype (function (mat-dim) mat) meye))
 (define-ofun meye (n)
   (case n
     (2 (mat2 '(1 0
@@ -303,14 +304,14 @@
                    (,*float-type* (mat ,@(unroll 4)))
                    (vec2 (3d-vectors::%vsetf ,b (+ (* (vx2 ,b) (e 0 0)) (* (vy2 ,b) (e 0 1)))
                                                 (+ (* (vx2 ,b) (e 1 0)) (* (vy2 ,b) (e 1 1)))))
-                   (mat2 (with-fast-matref (f ,b 2) (matf ,@(unrollm 2))))))
+                   (mat2 (with-fast-matref (f ,b 2) (matf ,a ,@(unrollm 2))))))
            (mat3 (etypecase ,b
                    (,*float-type* (mat ,@(unroll 9)))
                    (vec3 (3d-vectors::%vsetf ,b
                                              (+ (* (vx3 ,b) (e 0 0)) (* (vy3 ,b) (e 0 1)) (* (vz3 ,b) (e 0 2)))
                                              (+ (* (vx3 ,b) (e 1 0)) (* (vy3 ,b) (e 1 1)) (* (vz3 ,b) (e 1 2)))
                                              (+ (* (vx3 ,b) (e 2 0)) (* (vy3 ,b) (e 2 1)) (* (vz3 ,b) (e 2 2)))))
-                   (mat3 (with-fast-matref (f ,b 3) (matf ,@(unrollm 3))))))
+                   (mat3 (with-fast-matref (f ,b 3) (matf ,a ,@(unrollm 3))))))
            (mat4 (etypecase ,b
                    (,*float-type* (mat ,@(unroll 16)))
                    (vec4 (3d-vectors::%vsetf ,b
@@ -318,7 +319,7 @@
                                              (+ (* (vx4 ,b) (e 1 0)) (* (vy4 ,b) (e 1 1)) (* (vz4 ,b) (e 1 2)) (* (vw4 ,b) (e 1 3)))
                                              (+ (* (vx4 ,b) (e 2 0)) (* (vy4 ,b) (e 2 1)) (* (vz4 ,b) (e 2 2)) (* (vw4 ,b) (e 2 3)))
                                              (+ (* (vx4 ,b) (e 3 0)) (* (vy4 ,b) (e 3 1)) (* (vz4 ,b) (e 3 2)) (* (vw4 ,b) (e 3 3)))))
-                   (mat4 (with-fast-matref (f ,b 4) (matf ,@(unrollm 4))))))
+                   (mat4 (with-fast-matref (f ,b 4) (matf ,a ,@(unrollm 4))))))
            (matn (etypecase ,b
                    (,*float-type*
                     (map-into (%marrn ,a) (lambda (,m) (* (the ,*float-type* ,m)
