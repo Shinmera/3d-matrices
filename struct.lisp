@@ -111,7 +111,7 @@
 
 (declaim (inline mcref3))
 (declaim (ftype (function (mat3 (integer 0 2) (integer 0 2)) #.*float-type*) mcref3))
-(define-ofun mcref3 (mat x y)
+(define-ofun mcref3 (mat y x)
   (aref (%marr3 mat) (+ (* y 3) x)))
 
 (defsetf mcref3 (&environment env mat y x) (value)
