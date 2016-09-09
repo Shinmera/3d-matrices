@@ -6,14 +6,35 @@
 
 (in-package #:org.shirakumo.flare.matrix)
 
+;;; PUBLIC APOLOGY FOR PEOPLE THAT ARE EITHER NOT ME, OR ARE FUTURE ME
+;;;
+;; Let me just state straight up that I am not at all happy of
+;; a lot of the code in this file. There's lots of leaky macros
+;; all over the place and often things are abbreviated and inlined
+;; heavily for the sake of brevity and performance.
+;;
+;; If it helps at all, know at least that none of the leaky macros
+;; will actually ever be exported or should ever have to be used
+;; by anything outside of this very file.
+;;
+;; A lot of the explicit inlining could most definitely also be
+;; gotten rid of by instead performing the algorithm generically at
+;; compile time and spitting out the resulting forms. However, I'm
+;; not bothering with that right now as I just want to get this over
+;; with. If you want to improve the clarity of this code, you are
+;; more than welcome to and I thank you heavily in advance. Really.
+;; Thank you.
+
 (defmacro with-fast-matref ((accessor mat width) &body body)
   (let ((w (gensym "WIDTH")) (arr (gensym "ARRAY")))
     `(let ((,w ,width)
            (,arr (,(case width (2 '%marr2) (3 '%marr3) (4 '%marr4) (T 'marr)) ,mat)))
        (declare (ignorable ,w))
-       (macrolet ((,accessor (y &optional x) `(aref ,',arr ,(if x
-                                                                `(+ ,x (* ,y ,',(if (constantp width) width w)))
-                                                                y))))
+       (macrolet ((,accessor (y &optional x)
+                    `(the ,*float-type*
+                          (aref ,',arr ,(if x
+                                            `(+ ,x (* ,y ,',(if (constantp width) width w)))
+                                            y)))))
          ,@body))))
 
 (defmacro with-fast-matrefs (bindings &body body)
@@ -94,47 +115,42 @@
     (flet ((unroll (size &optional constant)
              (loop for i from 0 below size
                    collect `(,c (,e ,i) ,(if constant b `(,f ,i))))))
-      `(if (realp ,a)
-           (let ((,b (ensure-float ,a))
-                 (,a ,b))
-             (with-fast-matcase (,e ,a)
-               (mat4 (,@m4 ,@(unroll 16 T)))
-               (mat3 (,@m3 ,@(unroll 9 T)))
-               (mat2 (,@m2 ,@(unroll 4 T)))
-               (matn ,mnr)))
-           (with-fast-matcase (,e ,a)
-             (mat4 (etypecase ,b
-                     (real (let ((,b (ensure-float ,b))) (,@m4 ,@(unroll 16 T))))
-                     (mat4 (with-fast-matref (,f ,b 4) (,@m4 ,@(unroll 16))))))
-             (mat3 (etypecase ,b
-                     (real (let ((,b (ensure-float ,b))) (,@m4 ,@(unroll 9 T))))
-                     (mat3 (with-fast-matref (,f ,b 3) (,@m3 ,@(unroll 9))))))
-             (mat2 (etypecase ,b
-                     (real (let ((,b (ensure-float ,b))) (,@m4 ,@(unroll 4 T))))
-                     (mat2 (with-fast-matref (,f ,b 2) (,@m2 ,@(unroll 4))))))
-             (matn (etypecase ,b
-                     (real (let ((,b (ensure-float ,b)))
-                             ,mnr))
-                     (mat
-                      (assert (and (= (mcols a) (mcols b))
-                                   (= (mrows a) (mrows b))))
-                      ,mnmn))))))))
+      `(progn
+         (with-fast-matcase (,e ,a)
+           (mat4 (etypecase ,b
+                   (,*float-type* (,@m4 ,@(unroll 16 T)))
+                   (mat4 (with-fast-matref (,f ,b 4) (,@m4 ,@(unroll 16))))))
+           (mat3 (etypecase ,b
+                   (,*float-type* (,@m4 ,@(unroll 9 T)))
+                   (mat3 (with-fast-matref (,f ,b 3) (,@m3 ,@(unroll 9))))))
+           (mat2 (etypecase ,b
+                   (,*float-type* (,@m4 ,@(unroll 4 T)))
+                   (mat2 (with-fast-matref (,f ,b 2) (,@m2 ,@(unroll 4))))))
+           (matn (etypecase ,b
+                   (,*float-type*
+                    ,mnr)
+                   (mat
+                    (assert (and (= (mcols a) (mcols b))
+                                 (= (mrows a) (mrows b))))
+                    ,mnmn))))))))
 
 (defmacro define-matcomp (name op)
   (let ((2mat-name (intern (format NIL "~a-~a" '2mat name))))
     `(progn
-       (declaim (inline ,2mat-name))
        (declaim (ftype (function ((or mat real) (or mat real)) boolean) ,2mat-name))
        (declaim (ftype (function ((or mat real) &rest (or mat real)) boolean) ,name))
        (define-ofun ,2mat-name (a b)
-         (%2mat-op a b ,op and and and
-                   (with-fast-matrefs ((e a (%cols a))
-                                       (f b (%cols b)))
-                     (loop for i from 0 below (* (%cols a) (%rows a))
-                           always (,op (e i) (f i))))
-                   (with-fast-matref (e a (%cols a))
-                     (loop for i from 0 below (* (%cols a) (%rows a))
-                           always (,op (e i) b)))))
+         (let ((a (if (realp a) b a))
+               (b (if (realp a) a b)))
+           (let ((b (if (realp b) (ensure-float b) b)))
+             (%2mat-op a b ,op and and and
+                       (with-fast-matrefs ((e a (%cols a))
+                                           (f b (%cols b)))
+                         (loop for i from 0 below (* (%cols a) (%rows a))
+                               always (,op (e i) (f i))))
+                       (with-fast-matref (e a (%cols a))
+                         (loop for i from 0 below (* (%cols a) (%rows a))
+                               always (,op (e i) b)))))))
        (define-ofun ,name (val &rest vals)
          (loop for prev = val then next
                for next in vals
@@ -154,25 +170,30 @@
 (define-matcomp m<= <=)
 (define-matcomp m>= >=)
 
-(defmacro define-matop (name nname op)
+(defmacro define-matop (name nname op &optional body)
   (let ((2mat-name (intern (format NIL "~a-~a" '2mat name))))
     `(progn
-       (declaim (inline ,name ,2mat-name))
-       (declaim (ftype (function ((or mat real) &rest (or mat real)) mat) ,name))
-       (declaim (ftype (function ((or mat real) (or mat real)) mat) ,2mat-name))
+       ,@(unless body
+           `((declaim (ftype (function ((or mat real) &rest (or mat real)) mat) ,name))
+             (declaim (ftype (function ((or mat real) (or mat real)) mat) ,2mat-name))))
        (define-ofun ,2mat-name (a b)
-         (%2mat-op a b ,op mat mat mat
-                   (let ((mat (matn (%rows a) (%cols a))))
-                     (with-fast-matrefs ((e a (%cols a))
-                                         (f b (%cols b))
-                                         (g mat (%cols a)))
-                       (dotimes (i (* (%cols mat) (%rows mat)) mat)
-                         (setf (g i) (,op (e i) (f i))))))
-                   (let ((mat (matn (%rows a) (%cols a))))
-                     (with-fast-matrefs ((e a (%cols a))
-                                         (g mat (%cols a)))
-                       (dotimes (i (* (%cols mat) (%rows mat)) mat)
-                         (setf (g i) (,op (e i) b)))))))
+         (let ((a (if (realp a) b a))
+               (b (if (realp a) a b)))
+           (let ((b (if (realp b) (ensure-float b) b)))
+             ,(if body
+                  `(,body a b)
+                  `(%2mat-op a b ,op mat mat mat
+                             (let ((mat (matn (%rows a) (%cols a))))
+                               (with-fast-matrefs ((e a (%cols a))
+                                                   (f b (%cols b))
+                                                   (g mat (%cols a)))
+                                 (dotimes (i (* (%cols mat) (%rows mat)) mat)
+                                   (setf (g i) (,op (e i) (f i))))))
+                             (let ((mat (matn (%rows a) (%cols a))))
+                               (with-fast-matrefs ((e a (%cols a))
+                                                   (g mat (%cols a)))
+                                 (dotimes (i (* (%cols mat) (%rows mat)) mat)
+                                   (setf (g i) (,op (e i) b))))))))))
        (define-ofun ,name (val &rest vals)
          (cond ((cdr vals)
                 (apply #',nname (,2mat-name val (first vals)) (rest vals)))
@@ -184,21 +205,24 @@
            (1 `(,',2mat-name ,val ,(first vals)))
            (T `(,',nname (,',2mat-name ,val ,(first val)) ,@(rest vals))))))))
 
-(defmacro define-nmatop (name op)
+(defmacro define-nmatop (name op &optional body)
   (let ((2mat-name (intern (format NIL "~a-~a" '2mat name))))
     `(progn
-       (declaim (inline ,name ,2mat-name))
-       (declaim (ftype (function ((or mat real) &rest (or mat real)) mat) ,name))
-       (declaim (ftype (function ((or mat real) (or mat real)) mat) ,2mat-name))
+       ,@(unless body
+           `((declaim (ftype (function ((or mat real) &rest (or mat real)) mat) ,name))
+             (declaim (ftype (function ((or mat real) (or mat real)) mat) ,2mat-name))))
        (define-ofun ,2mat-name (a b)
-         (%2mat-op a b ,op mat mat mat
-                   (with-fast-matrefs ((e a (%cols a))
-                                       (f b (%cols b)))
-                     (dotimes (i (* (%cols a) (%rows a)) a)
-                       (setf (e i) (,op (e i) (f i)))))
-                   (with-fast-matref (e a (%cols a))
-                     (dotimes (i (* (%cols a) (%rows a)) a)
-                       (setf (e i) (,op (e i) b))))))
+         (let ((b (if (realp b) (ensure-float b) b)))
+           ,(if body
+                `(,body a b)
+                `(%2mat-op a b ,op (matf a) (matf a) (matf a)
+                           (with-fast-matrefs ((e a (%cols a))
+                                               (f b (%cols b)))
+                             (dotimes (i (* (%cols a) (%rows a)) a)
+                               (setf (e i) (,op (e i) (f i)))))
+                           (with-fast-matref (e a (%cols a))
+                             (dotimes (i (* (%cols a) (%rows a)) a)
+                               (setf (e i) (,op (e i) b))))))))
        (define-ofun ,name (val &rest vals)
          (if vals
              (loop for v in vals
@@ -212,13 +236,132 @@
            (T `(,',name (,',2mat-name ,val ,(first val)) ,@(rest vals))))))))
 
 (define-matop m+ nm+ +)
-(define-matop m- nm- -)
-(define-matop m* nm* *)
-(define-matop m/ nm/ /)
 (define-nmatop nm+ +)
+(define-matop m- nm- -)
 (define-nmatop nm- -)
-(define-nmatop nm* *)
-(define-nmatop nm/ /)
+
+(defmacro %2mat*-expansion (a b)
+  (let ((m (gensym "M")))
+    (flet ((unroll (size) (loop for i from 0 below size collect `(* (e ,i) ,b)))
+           (unrollm (size) (loop for i from 0 below size
+                                 collect `(+ ,@(loop for j from 0 below size
+                                                     collect `(* (e ,i ,j) (f ,j ,i)))))))
+      `(let ((,a (if (vec-p ,a) ,b ,a))
+             (,b (if (vec-p ,a) ,a ,b)))
+         (with-fast-matcase (e a)
+           (mat2 (etypecase ,b
+                   (,*float-type* (mat ,@(unroll 4)))
+                   (vec2 (vec2 (+ (* (vx2 ,b) (e 0 0)) (* (vy2 ,b) (e 0 1)))
+                               (+ (* (vx2 ,b) (e 1 0)) (* (vy2 ,b) (e 1 1)))))
+                   (mat2 (with-fast-matref (f a 2) (mat ,@(unrollm 2))))))
+           (mat3 (etypecase ,b
+                   (,*float-type* (mat ,@(unroll 9)))
+                   (vec3 (vec3 (+ (* (vx3 ,b) (e 0 0)) (* (vy3 ,b) (e 0 1)) (* (vz3 ,b) (e 0 2)))
+                               (+ (* (vx3 ,b) (e 1 0)) (* (vy3 ,b) (e 1 1)) (* (vz3 ,b) (e 1 2)))
+                               (+ (* (vx3 ,b) (e 2 0)) (* (vy3 ,b) (e 2 1)) (* (vz3 ,b) (e 2 2)))))
+                   (mat3 (with-fast-matref (f a 3) (mat ,@(unrollm 3))))))
+           (mat4 (etypecase ,b
+                   (,*float-type* (mat ,@(unroll 16)))
+                   (vec4 (vec4 (+ (* (vx4 ,b) (e 0 0)) (* (vy4 ,b) (e 0 1)) (* (vz4 ,b) (e 0 2)) (* (vw4 ,b) (e 0 3)))
+                               (+ (* (vx4 ,b) (e 1 0)) (* (vy4 ,b) (e 1 1)) (* (vz4 ,b) (e 1 2)) (* (vw4 ,b) (e 1 3)))
+                               (+ (* (vx4 ,b) (e 2 0)) (* (vy4 ,b) (e 2 1)) (* (vz4 ,b) (e 2 2)) (* (vw4 ,b) (e 2 3)))
+                               (+ (* (vx4 ,b) (e 3 0)) (* (vy4 ,b) (e 3 1)) (* (vz4 ,b) (e 3 2)) (* (vw4 ,b) (e 3 3)))))
+                   (mat4 (with-fast-matref (f a 4) (mat ,@(unrollm 4))))))
+           (matn (etypecase ,b
+                   (,*float-type*
+                    (let ((,m (matn (%rows ,a) (%cols ,a))))
+                      (map-into (%marrn ,m) (lambda (,m) (* (the ,*float-type* ,m)
+                                                            (the ,*float-type* ,b))) (%marrn ,a))
+                      ,m))
+                   (matn
+                    (assert (and (= (%rows ,a) (%cols ,b))
+                                 (= (%cols ,a) (%rows ,b))))
+                    (let ((,m (matn (%rows ,a) (%cols ,b))))
+                      (with-fast-matrefs ((e ,a (%cols ,a))
+                                          (f ,b (%cols ,b))
+                                          (g ,m (%cols ,m)))
+                        (dotimes (i (%rows ,m) ,m)
+                          (loop for sum = ,(ensure-float 0)
+                                for j from 0 below (%cols ,m)
+                                do (loop for k from 0 below (%cols ,a)
+                                         do (setf sum (+ (* (e i k) (f k i)) sum)))
+                                   (setf (g i j) sum)))))))))))))
+
+(defmacro %2nmat*-expansion (a b)
+  (let ((m (gensym "M")))
+    (flet ((unroll (size) (loop for i from 0 below size collect `(* (e ,i) ,b)))
+           (unrollm (size) (loop for i from 0 below size
+                                 collect `(+ ,@(loop for j from 0 below size
+                                                     collect `(* (e ,i ,j) (f ,j ,i)))))))
+      `(let ((,a (if (vec-p ,b) ,a ,b))
+             (,b (if (vec-p ,b) ,b ,a)))
+         (with-fast-matcase (e a)
+           (mat2 (etypecase ,b
+                   (,*float-type* (mat ,@(unroll 4)))
+                   (vec2 (3d-vectors::%vsetf ,b (+ (* (vx2 ,b) (e 0 0)) (* (vy2 ,b) (e 0 1)))
+                                                (+ (* (vx2 ,b) (e 1 0)) (* (vy2 ,b) (e 1 1)))))
+                   (mat2 (with-fast-matref (f ,a 2) (matf ,@(unrollm 2))))))
+           (mat3 (etypecase ,b
+                   (,*float-type* (mat ,@(unroll 9)))
+                   (vec3 (3d-vectors::%vsetf ,b
+                                             (+ (* (vx3 ,b) (e 0 0)) (* (vy3 ,b) (e 0 1)) (* (vz3 ,b) (e 0 2)))
+                                             (+ (* (vx3 ,b) (e 1 0)) (* (vy3 ,b) (e 1 1)) (* (vz3 ,b) (e 1 2)))
+                                             (+ (* (vx3 ,b) (e 2 0)) (* (vy3 ,b) (e 2 1)) (* (vz3 ,b) (e 2 2)))))
+                   (mat3 (with-fast-matref (f ,a 3) (matf ,@(unrollm 3))))))
+           (mat4 (etypecase ,b
+                   (,*float-type* (mat ,@(unroll 16)))
+                   (vec4 (3d-vectors::%vsetf ,b
+                                             (+ (* (vx4 ,b) (e 0 0)) (* (vy4 ,b) (e 0 1)) (* (vz4 ,b) (e 0 2)) (* (vw4 ,b) (e 0 3)))
+                                             (+ (* (vx4 ,b) (e 1 0)) (* (vy4 ,b) (e 1 1)) (* (vz4 ,b) (e 1 2)) (* (vw4 ,b) (e 1 3)))
+                                             (+ (* (vx4 ,b) (e 2 0)) (* (vy4 ,b) (e 2 1)) (* (vz4 ,b) (e 2 2)) (* (vw4 ,b) (e 2 3)))
+                                             (+ (* (vx4 ,b) (e 3 0)) (* (vy4 ,b) (e 3 1)) (* (vz4 ,b) (e 3 2)) (* (vw4 ,b) (e 3 3)))))
+                   (mat4 (with-fast-matref (f ,a 4) (matf ,@(unrollm 4))))))
+           (matn (etypecase ,b
+                   (,*float-type*
+                    (map-into (%marrn ,a) (lambda (,m) (* (the ,*float-type* ,m)
+                                                          (the ,*float-type* ,b))) (%marrn ,a)))
+                   (matn
+                    (assert (and (= (%rows ,a) (%cols ,a) (%cols ,b) (%rows ,b))))
+                    (let ((,m (make-array (%cols ,a) :initial-element ,(ensure-float 0) :element-type ',*float-type*))
+                          (s (%rows ,a)))
+                      (with-fast-matrefs ((e ,a s)
+                                          (f ,b s))
+                        (dotimes (i s)
+                          (loop for sum of-type ,*float-type* = ,(ensure-float 0)
+                                for j from 0 below s
+                                do (loop for k from 0 below s
+                                         do (setf sum (+ (* (e i k) (f k i)) sum)))
+                                   (setf (aref ,m j) sum))
+                          (loop for j from 0 below s
+                                do (setf (e i j) (aref ,m j))))))))
+                 ,a))))))
+
+(declaim (ftype (function ((or mat vec real) &rest (or vec mat real)) (or mat vec)) m* nm*))
+(declaim (ftype (function ((or mat vec real) (or vec mat real)) (or mat vec)) 2mat-m* 2mat-nm*))
+;; We can't always use the modifying variant for m* as the sizes can change depending on how you multiply!
+(define-matop m* m* * %2mat*-expansion)
+;; For the modifying variant the user will just have to watch out to ensure square sizes.
+(define-nmatop nm* * %2nmat*-expansion)
+
+;; We only allow element-wise division.
+(defmacro %2mat/-expansion (a b)
+  `(%2nmat/-expansion ,a ,b mat (matn (%rows ,a) (%cols ,a))))
+
+(defmacro %2nmat/-expansion (a b &optional (mc 'matf) (mn a))
+  (let ((m (gensym "M")))
+    (flet ((unroll (size) (loop for i from 0 below size collect `(/ (e ,i) ,b))))
+      `(with-fast-matcase (e ,a)
+         (mat2 (etypecase ,b (,*float-type* (,mc ,@(unroll 4)))))
+         (mat3 (etypecase ,b (,*float-type* (,mc ,@(unroll 9)))))
+         (mat4 (etypecase ,b (,*float-type* (,mc ,@(unroll 16)))))
+         (matn (etypecase ,b (,*float-type* (let ((,m ,mn))
+                                              (map-into (%marrn ,m) (lambda (,m) (* (the ,*float-type* ,m) ,b)) (%marrn ,a))
+                                              ,mn))))))))
+
+(declaim (ftype (function ((or mat real) &rest (or mat real)) mat) m/ nm/))
+(declaim (ftype (function ((or mat real) (or mat real)) mat) 2mat-m/ 2mat-nm/))
+(define-matop m/ nm/ / %2mat/-expansion)
+(define-nmatop nm/ / %2nmat/-expansion)
 
 (declaim (inline mapply))
 (declaim (ftype (function (mat (or symbol function)) mat) mapply))
