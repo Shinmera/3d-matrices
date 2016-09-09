@@ -76,7 +76,7 @@
                0 0 0 1)))
     (T (let ((mat (matn n n)))
          (do-mat-diag (i e mat mat)
-           (setf e 1))))))
+           (setf e #.(ensure-float 1)))))))
 
 (declaim (ftype (function (mat mat-dim) vec) mcol))
 (define-ofun mcol (mat n)
