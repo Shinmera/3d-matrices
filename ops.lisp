@@ -661,6 +661,23 @@
       (dotimes (i s m)
         (rotatef (e k i) (e l i))))))
 
+(declaim (inline mswap-row))
+(declaim (ftype (function (mat mat-dim mat-dim) mat) mswap-row))
+(define-ofun mswap-row (m k l)
+  (nmswap-row (mcopy m) k l))
+
+(declaim (inline nmswap-col))
+(declaim (ftype (function (mat mat-dim mat-dim) mat) nmswap-col))
+(define-ofun nmswap-col (m k l)
+  (let ((s (mcols m)))
+    (with-fast-matref (e m s)
+      (dotimes (i s m)
+        (rotatef (e i k) (e i l))))))
+
+(declaim (inline mswap-col))
+(declaim (ftype (function (mat mat-dim mat-dim) mat) mswap-col))
+(define-ofun mswap-col (m k l)
+  (nmswap-col (mcopy m) k l))
 
 (define-ofun m1norm (m)
   (let ((max #.(ensure-float 0)))
