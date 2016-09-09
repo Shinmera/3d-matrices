@@ -686,8 +686,24 @@
           (do-mat-index (i el m sum)
             (incf sum (expt el 2))))))
 
+(declaim (ftype (function (mat) (values mat mat)) mqr))
+(define-ofun mqr (m)
+  ;; Some day.
+  )
+
+(declaim (ftype (function (mat &optional (integer 0)) list) meigen))
+(defun meigen (m &optional (iterations 20))
+  (multiple-value-bind (Q R) (mqr m)
+    (loop repeat iterations
+          do (multiple-value-bind (Qn Rn)
+                 (mqr (nm* R Q))
+               (setf Q Qn)
+               (setf R Rn)))
+    (let ((values ()))
+      (do-mat-diag (i el (nm* R Q) (nreverse values))
+        (push el values)))))
+
 ;; TODO
-;; QR, eigenvalues
 ;; upper-triangular
 ;; lower-triangular
 ;; diagonal
