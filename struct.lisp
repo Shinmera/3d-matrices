@@ -380,7 +380,7 @@
                 (T
                  (write-string "└ " stream)))
           (dotimes (j (mcols m))
-            (format stream "~8,3@e " (mcref m i j)))
+            (format stream "~10,3@e " (mcref m i j)))
           (cond ((= i 0)
                  (write-string "┐" stream))
                 ((< i (1- (mrows m)))
