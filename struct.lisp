@@ -47,7 +47,7 @@
 
 (defstruct (mat2 (:conc-name NIL)
                    (:constructor %mat2 (%marr2))
-                   (:copier mcopy2)
+                   (:copier NIL)
                    (:predicate mat2-p))
   (%marr2 NIL :type (simple-array #.*float-type* (4))))
 
@@ -75,6 +75,11 @@
          `(%mat2 ,(%proper-array-form 4 elements)))
         (T whole)))
 
+(declaim (inline mcopy2))
+(declaim (ftype (function (mat2) mat2) mcopy2))
+(defun mcopy2 (m2)
+  (%mat2 (copy-seq (%marr2 m2))))
+
 (defmethod print-object ((m mat2) stream)
   (write (make-load-form m) :stream stream))
 
@@ -84,7 +89,7 @@
 
 (defstruct (mat3 (:conc-name NIL)
                    (:constructor %mat3 (%marr3))
-                   (:copier mcopy3)
+                   (:copier NIL)
                    (:predicate mat3-p))
   (%marr3 NIL :type (simple-array #.*float-type* (9))))
 
@@ -112,6 +117,11 @@
          `(%mat3 ,(%proper-array-form 9 elements)))
         (T whole)))
 
+(declaim (inline mcopy3))
+(declaim (ftype (function (mat3) mat3) mcopy3))
+(defun mcopy3 (m3)
+  (%mat3 (copy-seq (%marr3 m3))))
+
 (defmethod print-object ((m mat3) stream)
   (write (make-load-form m) :stream stream))
 
@@ -121,7 +131,7 @@
 
 (defstruct (mat4 (:conc-name NIL)
                    (:constructor %mat4 (%marr4))
-                   (:copier mcopy4)
+                   (:copier NIL)
                    (:predicate mat4-p))
   (%marr4 NIL :type (simple-array #.*float-type* (16))))
 
@@ -149,6 +159,11 @@
          `(%mat4 ,(%proper-array-form 16 elements)))
         (T whole)))
 
+(declaim (inline mcopy4))
+(declaim (ftype (function (mat4) mat4) mcopy4))
+(defun mcopy4 (m4)
+  (%mat4 (copy-seq (%marr4 m4))))
+
 (defmethod print-object ((m mat4) stream)
   (write (make-load-form m) :stream stream))
 
@@ -158,7 +173,7 @@
 
 (defstruct (matn (:conc-name NIL)
                  (:constructor %matn (%rows %cols %marrn))
-                 (:copier mcopyn)
+                 (:copier NIL)
                  (:predicate matn-p))
   (%rows NIL :type mat-dim)
   (%cols NIL :type mat-dim)
@@ -183,12 +198,33 @@
 (define-ofun matn (r c &optional elements)
   (check-type r mat-dim)
   (check-type c mat-dim)
-  (%matn c r (%proper-array (* r c) elements)))
+  (let ((arr (%proper-array (* r c) elements)))
+    (if (= r c)
+        (case r
+          (2 (%mat2 arr))
+          (3 (%mat3 arr))
+          (4 (%mat4 arr))
+          (T (%matn r r arr)))
+        (%matn c r arr))))
 
 (define-compiler-macro matn (&whole whole &environment env r c &optional elements)
   (cond ((constantp elements env)
-         `(%matn ,r ,c ,(%proper-array-form `(* ,c ,r) elements)))
+         (let ((arr (gensym "ARR")) (rows (gensym "ROWS")) (cols (gensym "COLS")))
+           `(let ((,arr ,(%proper-array-form `(* ,c ,r) elements))
+                  (,rows ,r) (,cols ,c))
+              (if (= ,rows ,cols)
+                  (case ,rows
+                    (2 (%mat2 ,arr))
+                    (3 (%mat3 ,arr))
+                    (4 (%mat4 ,arr))
+                    (T (%matn ,rows ,rows ,arr)))
+                  (%matn ,rows ,cols ,arr)))))
         (T whole)))
+
+(declaim (inline mcopyn))
+(declaim (ftype (function (matn) matn) mcopyn))
+(defun mcopyn (mn)
+  (%matn (%rows mn) (%cols mn) (copy-seq (%marrn mn))))
 
 (defmethod print-object ((m matn) stream)
   (write (make-load-form m) :stream stream))
@@ -298,3 +334,12 @@
                      collect `(setf (aref (%marr4 ,m) ,i) ,(ensure-float-param v env)))
              ,m))
       (T whole))))
+
+(declaim (inline mcopy))
+(declaim (ftype (function (mat) mat) mcopy))
+(defun mcopy (m)
+  (etypecase m
+    (mat2 (mcopy2 m))
+    (mat3 (mcopy3 m))
+    (mat4 (mcopy4 m))
+    (matn (mcopyn m))))
