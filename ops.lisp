@@ -8,7 +8,7 @@
 
 ;;; PUBLIC APOLOGY FOR PEOPLE THAT ARE EITHER NOT ME, OR ARE FUTURE ME
 ;;;
-;; Let me just state straight up that I am not at all happy of
+;; Let me just state straight up that I am not at all happy with
 ;; a lot of the code in this file. There's lots of leaky macros
 ;; all over the place and often things are abbreviated and inlined
 ;; heavily for the sake of brevity and performance.
@@ -577,13 +577,37 @@
     (matn
      (mtranspose (mcof m)))))
 
-(declaim (ftype (function (mat) (values mat mat-dim)) mpivot))
-(defun mpivot (m)
-  ;; FIXME!!
-  (values (midentity (mrows m)) 0))
+;; pivotized matrix, pivot matrix, number of swaps.
+(declaim (ftype (function (mat) (values mat mat mat-dim)) mpivot))
+(define-ofun mpivot (m)
+  (assert (= (mrows m) (mcols m)))
+  (let* ((c (mrows m))
+         (r (mcopy m))
+         (p (midentity c))
+         (s 0))
+    (declare (type mat-dim s))
+    (with-fast-matrefs ((e r c))
+      (dotimes (i c (values r p s))
+        (let ((index 0) (max #.(ensure-float 0)))
+          (loop for j from i below c
+                for el = (abs (e j i))
+                do (when (< max el)
+                     ;; Make sure we don't accidentally introduce zeroes
+                     ;; into the diagonal by swapping!
+                     (when (/= 0 (e i j))
+                       (setf max el)
+                       (setf index j))))
+          (when (= 0 max)
+            (error "The matrix~%  ~a~%is singular in column ~a. A pivot cannot be constructed for it."
+                   m i))
+          ;; Non-diagonal means we swap. Record.
+          (when (/= i index)
+            (setf s (1+ s))
+            (nmswap-row p i index)
+            (nmswap-row r i index)))))))
 
 (declaim (ftype (function (mat) (values mat mat mat-dim)) mlu))
-(defun mlu (m)
+(define-ofun mlu (m)
   (etypecase m
     (mat2 (with-fast-matref (e m 2)
             (if (= 0 (mcref m 0 0))
@@ -601,20 +625,31 @@
     ;; We're using the Crout method for LU decomposition.
     ;; See https://en.wikipedia.org/wiki/Crout_matrix_decomposition
     (mat
-     (let* ((c (%rows m)))
-       (multiple-value-bind (P s) (mpivot m)
-         (let ((LU (m* m P)))
-           (with-fast-matrefs ((lu LU c))
-             (dotimes (j c)
-               (loop for i from 0 to j
-                     for sum = (loop for k from 0 below i
-                                     sum (* (lu i k) (lu k j)))
-                     do (setf (lu i j) (- (lu i j) sum)))
-               (loop for i from (1+ j) below c
-                     for sum = (loop for k from 0 below j
-                                     sum (* (lu i k) (lu k j)))
-                     do (setf (lu i j) (/ (- (lu i j) sum) (lu j j))))))
-           (values LU P s)))))))
+     (let* ((c (%rows m))
+            (sum #.(ensure-float 0)))
+       (declare (type #.*float-type* sum))
+       (multiple-value-bind (LU P s) (mpivot m)
+         (with-fast-matrefs ((lu LU c))
+           (dotimes (j c)
+             (setf sum #.(ensure-float 0))
+             (loop for i from 0 to j
+                   do (loop for k from 0 below i
+                            do (incf sum (* (lu i k) (lu k j))))
+                      (setf (lu i j) (- (lu i j) sum)))
+             (setf sum #.(ensure-float 0))
+             (loop for i from (1+ j) below c
+                   do (loop for k from 0 below j
+                            do (incf sum (* (lu i k) (lu k j))))
+                      (setf (lu i j) (/ (- (lu i j) sum) (lu j j))))))
+         (values LU P s))))))
+
+(declaim (inline nmswap-row))
+(declaim (ftype (function (mat mat-dim mat-dim) mat) nmswap-row))
+(define-ofun nmswap-row (m k l)
+  (let ((s (mcols m)))
+    (with-fast-matref (e m s)
+      (dotimes (i s m)
+        (rotatef (e k i) (e l i))))))
 
 ;; TODO
 ;; QR, eigenvalues
