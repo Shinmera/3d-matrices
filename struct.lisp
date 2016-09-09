@@ -45,6 +45,12 @@
                 (sequence (let ((array (%mka ,size :element 0)))
                             (map-into array #'ensure-float ,el)))))))))
 
+(defmacro define-describe-matrix (type)
+  `(defmethod describe-object ((a ,type) stream)
+     (format stream "~ax~a matrix of type ~a~%~%"
+             (mrows a) (mcols a) ',type)
+     (write-matrix a stream)))
+
 (defstruct (mat2 (:conc-name NIL)
                    (:constructor %mat2 (%marr2))
                    (:copier NIL)
@@ -86,6 +92,8 @@
 (defmethod make-load-form ((m mat2) &optional env)
   (declare (ignore env))
   `(mat2 ,(%marr2 m)))
+
+(define-describe-matrix mat2)
 
 (defstruct (mat3 (:conc-name NIL)
                    (:constructor %mat3 (%marr3))
@@ -129,6 +137,8 @@
   (declare (ignore env))
   `(mat3 ,(%marr3 m)))
 
+(define-describe-matrix mat3)
+
 (defstruct (mat4 (:conc-name NIL)
                    (:constructor %mat4 (%marr4))
                    (:copier NIL)
@@ -170,6 +180,8 @@
 (defmethod make-load-form ((m mat4) &optional env)
   (declare (ignore env))
   `(mat4 ,(%marr4 m)))
+
+(define-describe-matrix mat4)
 
 (defstruct (matn (:conc-name NIL)
                  (:constructor %matn (%rows %cols %marrn))
@@ -232,6 +244,8 @@
 (defmethod make-load-form ((m matn) &optional env)
   (declare (ignore env))
   `(matn ,(%rows m) ,(%cols m) ,(%marrn m)))
+
+(define-describe-matrix matn)
 
 ;; Compat
 (deftype mat ()
@@ -343,3 +357,21 @@
     (mat3 (mcopy3 m))
     (mat4 (mcopy4 m))
     (matn (mcopyn m))))
+
+(defun write-matrix (m stream)
+  (dotimes (i (mrows m))
+    (cond ((= i 0)
+           (write-string "┌ " stream))
+          ((< i (1- (mrows m)))
+           (write-string "│ " stream))
+          (T
+           (write-string "└ " stream)))
+    (dotimes (j (mcols m))
+      (format stream "~8,3@e " (mcref m i j)))
+    (cond ((= i 0)
+           (write-string "┐" stream))
+          ((< i (1- (mrows m)))
+           (write-string "│" stream))
+          (T
+           (write-string "┘" stream)))
+    (terpri stream)))
