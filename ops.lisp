@@ -653,32 +653,6 @@
                       (setf (lu i j) (/ (- (lu i j) sum) (lu j j))))))
          (values LU P s))))))
 
-(declaim (inline nmswap-row))
-(declaim (ftype (function (mat mat-dim mat-dim) mat) nmswap-row))
-(define-ofun nmswap-row (m k l)
-  (let ((s (mcols m)))
-    (with-fast-matref (e m s)
-      (dotimes (i s m)
-        (rotatef (e k i) (e l i))))))
-
-(declaim (inline mswap-row))
-(declaim (ftype (function (mat mat-dim mat-dim) mat) mswap-row))
-(define-ofun mswap-row (m k l)
-  (nmswap-row (mcopy m) k l))
-
-(declaim (inline nmswap-col))
-(declaim (ftype (function (mat mat-dim mat-dim) mat) nmswap-col))
-(define-ofun nmswap-col (m k l)
-  (let ((s (mcols m)))
-    (with-fast-matref (e m s)
-      (dotimes (i s m)
-        (rotatef (e i k) (e i l))))))
-
-(declaim (inline mswap-col))
-(declaim (ftype (function (mat mat-dim mat-dim) mat) mswap-col))
-(define-ofun mswap-col (m k l)
-  (nmswap-col (mcopy m) k l))
-
 (define-ofun m1norm (m)
   (let ((max #.(ensure-float 0)))
     (with-fast-matref (e m (mcols m))
@@ -716,13 +690,65 @@
                  (mqr (nm* R Q))
                (setf Q Qn)
                (setf R Rn)))
-    (let ((values ()))
-      (do-mat-diag (i el (nm* R Q) (nreverse values))
-        (push el values)))))
+    (mdiag (nm* R Q))))
 
-;; TODO
-;; upper-triangular
-;; lower-triangular
-;; diagonal
-;; upgrade, downgrade
-;; head, tail, left, right, segment, block, corners
+(declaim (inline nmswap-row))
+(declaim (ftype (function (mat mat-dim mat-dim) mat) nmswap-row))
+(define-ofun nmswap-row (m k l)
+  (let ((s (mcols m)))
+    (with-fast-matref (e m s)
+      (dotimes (i s m)
+        (rotatef (e k i) (e l i))))))
+
+(declaim (inline mswap-row))
+(declaim (ftype (function (mat mat-dim mat-dim) mat) mswap-row))
+(define-ofun mswap-row (m k l)
+  (nmswap-row (mcopy m) k l))
+
+(declaim (inline nmswap-col))
+(declaim (ftype (function (mat mat-dim mat-dim) mat) nmswap-col))
+(define-ofun nmswap-col (m k l)
+  (let ((s (mcols m)))
+    (with-fast-matref (e m s)
+      (dotimes (i s m)
+        (rotatef (e i k) (e i l))))))
+
+(declaim (inline mswap-col))
+(declaim (ftype (function (mat mat-dim mat-dim) mat) mswap-col))
+(define-ofun mswap-col (m k l)
+  (nmswap-col (mcopy m) k l))
+
+(declaim (ftype (function (mat) list) mdiag))
+(defun mdiag (m)
+  (let ((values ()))
+    (do-mat-diag (i el m (nreverse values))
+      (push el values))))
+
+(declaim (ftype (function (mat mat-dim mat-dim mat-dim mat-dim) mat) mblock))
+(defun mblock (m y1 x1 y2 x2)
+  (let ((r (matn (- y2 y1) (- x2 x1))))
+    (with-fast-matref (e m (mcols m))
+      (with-fast-matref (f r (mcols r))
+        (dotimes (i (mrows r) r)
+          (dotimes (j (mcols r))
+            (setf (f i j) (e (+ i y1) (+ j x1)))))))))
+
+(declaim (ftype (function (mat mat-dim) mat) mtop))
+(defun mtop (m n)
+  (declare (inline mblock))
+  (mblock m 0 0 n (mcols m)))
+
+(declaim (ftype (function (mat mat-dim) mat) mbottom))
+(defun mbottom (m n)
+  (declare (inline mblock))
+  (mblock m (- (mrows m) n) 0 (mrows m) (mcols m)))
+
+(declaim (ftype (function (mat mat-dim) mat) mleft))
+(defun mleft (m n)
+  (declare (inline mblock))
+  (mblock m 0 0 (mrows m) n))
+
+(declaim (ftype (function (mat mat-dim) mat) mright))
+(defun mright (m n)
+  (declare (inline mblock))
+  (mblock m 0 (- (mcols m) n) (mrows m) (mcols m)))
