@@ -314,16 +314,19 @@
         (m (gensym "M")))
     (case len
       (4 `(let ((,m (mat2)))
-            ,@(loop for i from 0 below 4 for v in vals
-                    collect `(setf (aref (%marr2 ,m) ,i) ,(ensure-float-param v env)))
+            (psetf
+             ,@(loop for i from 0 below 4 for v in vals
+                     append `((aref (%marr2 ,m) ,i) ,(ensure-float-param v env))))
             ,m))
       (9 `(let ((,m (mat3)))
-            ,@(loop for i from 0 below 9 for v in vals
-                    collect `(setf (aref (%marr3 ,m) ,i) ,(ensure-float-param v env)))
+            (psetf
+             ,@(loop for i from 0 below 9 for v in vals
+                     append `((aref (%marr3 ,m) ,i) ,(ensure-float-param v env))))
             ,m))
       (16 `(let ((,m (mat4)))
-             ,@(loop for i from 0 below 16 for v in vals
-                     collect `(setf (aref (%marr4 ,m) ,i) ,(ensure-float-param v env)))
+             (psetf
+              ,@(loop for i from 0 below 16 for v in vals
+                      append `((aref (%marr4 ,m) ,i) ,(ensure-float-param v env))))
              ,m))
       (T whole))))
 
@@ -336,16 +339,19 @@
         (m (gensym "M")))
     (case len
       (4 `(let ((,m ,mat))
-            ,@(loop for i from 0 below 4 for v in vals
-                    collect `(setf (aref (%marr2 ,m) ,i) ,(ensure-float-param v env)))
+            (psetf
+             ,@(loop for i from 0 below 4 for v in vals
+                     append `((aref (%marr2 ,m) ,i) ,(ensure-float-param v env))))
             ,m))
       (9 `(let ((,m ,mat))
-            ,@(loop for i from 0 below 9 for v in vals
-                    collect `(setf (aref (%marr3 ,m) ,i) ,(ensure-float-param v env)))
+            (psetf
+             ,@(loop for i from 0 below 9 for v in vals
+                     append `((aref (%marr3 ,m) ,i) ,(ensure-float-param v env))))
             ,m))
       (16 `(let ((,m ,mat))
-             ,@(loop for i from 0 below 16 for v in vals
-                     collect `(setf (aref (%marr4 ,m) ,i) ,(ensure-float-param v env)))
+             (psetf
+              ,@(loop for i from 0 below 16 for v in vals
+                      append `((aref (%marr4 ,m) ,i) ,(ensure-float-param v env))))
              ,m))
       (T whole))))
 
