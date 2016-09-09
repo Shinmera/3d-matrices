@@ -26,15 +26,16 @@
 ;; Thank you.
 
 (defmacro with-fast-matref ((accessor mat width) &body body)
-  (let ((w (gensym "WIDTH")) (arr (gensym "ARRAY")))
+  (let ((w (gensym "WIDTH")) (arr (gensym "ARRAY"))
+        (x (gensym "X")) (y (gensym "Y")))
     `(let ((,w ,width)
            (,arr (,(case width (2 '%marr2) (3 '%marr3) (4 '%marr4) (T 'marr)) ,mat)))
        (declare (ignorable ,w))
-       (macrolet ((,accessor (y &optional x)
+       (macrolet ((,accessor (,y &optional ,x)
                     `(the ,*float-type*
-                          (aref ,',arr ,(if x
-                                            `(+ ,x (* ,y ,',(if (constantp width) width w)))
-                                            y)))))
+                          (aref ,',arr ,(if ,x
+                                            `(+ ,,x (* ,,y ,',(if (constantp width) width w)))
+                                            ,y)))))
          ,@body))))
 
 (defmacro with-fast-matrefs (bindings &body body)
