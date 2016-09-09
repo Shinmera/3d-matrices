@@ -156,10 +156,10 @@
 (declaim (inline mcref4))
 (declaim (ftype (function (mat4 (integer 0 3) (integer 0 3)) #.*float-type*) mcref4))
 (define-ofun mcref4 (mat y x)
-  (aref (%marr4 mat) (+ (* y 3) x)))
+  (aref (%marr4 mat) (+ (* y 4) x)))
 
 (defsetf mcref4 (&environment env mat y x) (value)
-  `(setf (aref (%marr4 ,mat) (+ (* ,y 3) ,x)) ,(ensure-float-param value env)))
+  `(setf (aref (%marr4 ,mat) (+ (* ,y 4) ,x)) ,(ensure-float-param value env)))
 
 (define-ofun mat4 (&optional elements)
   (%mat4 (%proper-array 16 elements)))
