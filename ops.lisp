@@ -290,7 +290,7 @@
                                          do (setf sum (+ (* (e i k) (f k i)) sum)))
                                    (setf (g i j) sum)))))))))))))
 
-(defmacro %2nmat*-expansion (a b)
+(defmacro %2nmat*-expansion (a b &optional (u a))
   (let ((m (gensym "M")))
     (flet ((unroll (size) (loop for i from 0 below size collect `(* (e ,i) ,b)))
            (unrollm (size) (loop for i from 0 below size
@@ -301,25 +301,25 @@
              (,b (if (vec-p ,a) ,a ,b)))
          (with-fast-matcase (e a)
            (mat2 (etypecase ,b
-                   (,*float-type* (mat ,@(unroll 4)))
+                   (,*float-type* (matf ,@(unroll 4)))
                    (vec2 (3d-vectors::%vsetf ,b (+ (* (vx2 ,b) (e 0 0)) (* (vy2 ,b) (e 0 1)))
                                                 (+ (* (vx2 ,b) (e 1 0)) (* (vy2 ,b) (e 1 1)))))
-                   (mat2 (with-fast-matref (f ,b 2) (matf ,a ,@(unrollm 2))))))
+                   (mat2 (with-fast-matref (f ,b 2) (matf ,u ,@(unrollm 2))))))
            (mat3 (etypecase ,b
-                   (,*float-type* (mat ,@(unroll 9)))
-                   (vec3 (3d-vectors::%vsetf ,b
-                                             (+ (* (vx3 ,b) (e 0 0)) (* (vy3 ,b) (e 0 1)) (* (vz3 ,b) (e 0 2)))
-                                             (+ (* (vx3 ,b) (e 1 0)) (* (vy3 ,b) (e 1 1)) (* (vz3 ,b) (e 1 2)))
-                                             (+ (* (vx3 ,b) (e 2 0)) (* (vy3 ,b) (e 2 1)) (* (vz3 ,b) (e 2 2)))))
-                   (mat3 (with-fast-matref (f ,b 3) (matf ,a ,@(unrollm 3))))))
+                      (,*float-type* (matf ,@(unroll 9)))
+                      (vec3 (3d-vectors::%vsetf ,b
+                                                (+ (* (vx3 ,b) (e 0 0)) (* (vy3 ,b) (e 0 1)) (* (vz3 ,b) (e 0 2)))
+                                                (+ (* (vx3 ,b) (e 1 0)) (* (vy3 ,b) (e 1 1)) (* (vz3 ,b) (e 1 2)))
+                                                (+ (* (vx3 ,b) (e 2 0)) (* (vy3 ,b) (e 2 1)) (* (vz3 ,b) (e 2 2)))))
+                      (mat3 (with-fast-matref (f ,b 3) (matf ,u ,@(unrollm 3))))))
            (mat4 (etypecase ,b
-                   (,*float-type* (mat ,@(unroll 16)))
+                   (,*float-type* (matf ,@(unroll 16)))
                    (vec4 (3d-vectors::%vsetf ,b
                                              (+ (* (vx4 ,b) (e 0 0)) (* (vy4 ,b) (e 0 1)) (* (vz4 ,b) (e 0 2)) (* (vw4 ,b) (e 0 3)))
                                              (+ (* (vx4 ,b) (e 1 0)) (* (vy4 ,b) (e 1 1)) (* (vz4 ,b) (e 1 2)) (* (vw4 ,b) (e 1 3)))
                                              (+ (* (vx4 ,b) (e 2 0)) (* (vy4 ,b) (e 2 1)) (* (vz4 ,b) (e 2 2)) (* (vw4 ,b) (e 2 3)))
                                              (+ (* (vx4 ,b) (e 3 0)) (* (vy4 ,b) (e 3 1)) (* (vz4 ,b) (e 3 2)) (* (vw4 ,b) (e 3 3)))))
-                   (mat4 (with-fast-matref (f ,b 4) (matf ,a ,@(unrollm 4))))))
+                   (mat4 (with-fast-matref (f ,b 4) (matf ,u ,@(unrollm 4))))))
            (matn (etypecase ,b
                    (,*float-type*
                     (map-into (%marrn ,a) (lambda (,m) (* (the ,*float-type* ,m)
@@ -329,7 +329,8 @@
                     (let ((,m (make-array (%cols ,a) :initial-element ,(ensure-float 0) :element-type ',*float-type*))
                           (s (%rows ,a)))
                       (with-fast-matrefs ((e ,a s)
-                                          (f ,b s))
+                                          (f ,b s)
+                                          (g ,u s))
                         (dotimes (i s)
                           (loop for sum of-type ,*float-type* = ,(ensure-float 0)
                                 for j from 0 below s
@@ -337,8 +338,11 @@
                                          do (setf sum (+ (* (e i k) (f k i)) sum)))
                                    (setf (aref ,m j) sum))
                           (loop for j from 0 below s
-                                do (setf (e i j) (aref ,m j))))))))
+                                do (setf (g i j) (aref ,m j))))))))
                  ,a))))))
+
+(defmacro %2n*mat-expansion (a b)
+  `(%2nmat*-expansion ,a ,b ,b))
 
 (declaim (ftype (function ((or mat vec real) &rest (or vec mat real)) (or mat vec)) m* nm*))
 (declaim (ftype (function ((or mat vec real) (or vec mat real)) (or mat vec)) 2mat-m* 2mat-nm*))
@@ -346,6 +350,7 @@
 (define-matop m* m* * %2mat*-expansion)
 ;; For the modifying variant the user will just have to watch out to ensure square sizes.
 (define-nmatop nm* * %2nmat*-expansion)
+(define-nmatop n*m * %2n*mat-expansion)
 
 ;; We only allow element-wise division.
 (defmacro %2mat/-expansion (a b)
