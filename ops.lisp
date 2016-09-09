@@ -63,7 +63,7 @@
        ,@(when matn
            `((matn ,@matn))))))
 
-(define-ofun midentity (n)
+(define-ofun meye (n)
   (case n
     (2 (mat2 '(1 0
                0 1)))
@@ -586,7 +586,7 @@
   (assert (= (mrows m) (mcols m)))
   (let* ((c (mrows m))
          (r (mcopy m))
-         (p (midentity c))
+         (p (meye c))
          (s 0))
     (declare (type mat-dim s))
     (with-fast-matrefs ((e r c))
