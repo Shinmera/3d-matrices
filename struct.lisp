@@ -276,3 +276,25 @@
                      collect `(setf (aref (%marr4 ,m) ,i) ,(ensure-float-param v env)))
              ,m))
       (T whole))))
+
+(defun matf (mat &rest vals)
+  (map-into (marr mat) #'ensure-float vals)
+  mat)
+
+(define-compiler-macro matf (&whole whole &environment env mat &rest vals)
+  (let ((len (length vals))
+        (m (gensym "M")))
+    (case len
+      (4 `(let ((,m ,mat))
+            ,@(loop for i from 0 below 4 for v in vals
+                    collect `(setf (aref (%marr2 ,m) ,i) ,(ensure-float-param v env)))
+            ,m))
+      (9 `(let ((,m ,mat))
+            ,@(loop for i from 0 below 9 for v in vals
+                    collect `(setf (aref (%marr3 ,m) ,i) ,(ensure-float-param v env)))
+            ,m))
+      (16 `(let ((,m ,mat))
+             ,@(loop for i from 0 below 16 for v in vals
+                     collect `(setf (aref (%marr4 ,m) ,i) ,(ensure-float-param v env)))
+             ,m))
+      (T whole))))
