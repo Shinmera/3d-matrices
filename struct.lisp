@@ -55,10 +55,10 @@
                    (:constructor %mat2 (%marr2))
                    (:copier NIL)
                    (:predicate mat2-p))
-  (%marr2 NIL :type (simple-array #.*float-type* (4))))
+  (%marr2 NIL :type (simple-array float-type (4))))
 
 (declaim (inline miref2))
-(declaim (ftype (function (mat2 (integer 0 3)) #.*float-type*) miref2))
+(declaim (ftype (function (mat2 (integer 0 3)) float-type) miref2))
 (define-ofun miref2 (mat i)
   (aref (%marr2 mat) i))
 
@@ -66,7 +66,7 @@
   `(setf (aref (%marr2 ,mat) ,i) ,(ensure-float-param value env)))
 
 (declaim (inline mcref2))
-(declaim (ftype (function (mat2 (integer 0 1) (integer 0 1)) #.*float-type*) mcref2))
+(declaim (ftype (function (mat2 (integer 0 1) (integer 0 1)) float-type) mcref2))
 (define-ofun mcref2 (mat y x)
   (aref (%marr2 mat) (+ (* y 2) x)))
 
@@ -99,10 +99,10 @@
                    (:constructor %mat3 (%marr3))
                    (:copier NIL)
                    (:predicate mat3-p))
-  (%marr3 NIL :type (simple-array #.*float-type* (9))))
+  (%marr3 NIL :type (simple-array float-type (9))))
 
 (declaim (inline miref3))
-(declaim (ftype (function (mat3 (integer 0 8)) #.*float-type*) miref3))
+(declaim (ftype (function (mat3 (integer 0 8)) float-type) miref3))
 (define-ofun miref3 (mat i)
   (aref (%marr3 mat) i))
 
@@ -110,7 +110,7 @@
   `(setf (aref (%marr3 ,mat) ,i) ,(ensure-float-param value env)))
 
 (declaim (inline mcref3))
-(declaim (ftype (function (mat3 (integer 0 2) (integer 0 2)) #.*float-type*) mcref3))
+(declaim (ftype (function (mat3 (integer 0 2) (integer 0 2)) float-type) mcref3))
 (define-ofun mcref3 (mat y x)
   (aref (%marr3 mat) (+ (* y 3) x)))
 
@@ -143,10 +143,10 @@
                    (:constructor %mat4 (%marr4))
                    (:copier NIL)
                    (:predicate mat4-p))
-  (%marr4 NIL :type (simple-array #.*float-type* (16))))
+  (%marr4 NIL :type (simple-array float-type (16))))
 
 (declaim (inline miref4))
-(declaim (ftype (function (mat4 (integer 0 15)) #.*float-type*) miref4))
+(declaim (ftype (function (mat4 (integer 0 15)) float-type) miref4))
 (define-ofun miref4 (mat i)
   (aref (%marr4 mat) i))
 
@@ -154,7 +154,7 @@
   `(setf (aref (%marr4 ,mat) ,i) ,(ensure-float-param value env)))
 
 (declaim (inline mcref4))
-(declaim (ftype (function (mat4 (integer 0 3) (integer 0 3)) #.*float-type*) mcref4))
+(declaim (ftype (function (mat4 (integer 0 3) (integer 0 3)) float-type) mcref4))
 (define-ofun mcref4 (mat y x)
   (aref (%marr4 mat) (+ (* y 4) x)))
 
@@ -189,10 +189,10 @@
                  (:predicate matn-p))
   (%rows NIL :type mat-dim)
   (%cols NIL :type mat-dim)
-  (%marrn NIL :type (simple-array #.*float-type*)))
+  (%marrn NIL :type (simple-array float-type)))
 
 (declaim (inline mirefn))
-(declaim (ftype (function (matn (integer 0 #.(expt *matrix-limit* 2))) #.*float-type*) mirefn))
+(declaim (ftype (function (matn (integer 0 #.(expt *matrix-limit* 2))) float-type) mirefn))
 (define-ofun mirefn (mat i)
   (aref (%marrn mat) i))
 
@@ -200,7 +200,7 @@
   `(setf (aref (%marrn ,mat) ,i) ,(ensure-float-param value env)))
 
 (declaim (inline mcrefn))
-(declaim (ftype (function (matn mat-dim mat-dim) #.*float-type*) mcrefn))
+(declaim (ftype (function (matn mat-dim mat-dim) float-type) mcrefn))
 (define-ofun mcrefn (mat y x)
   (aref (%marrn mat) (+ (* y (%cols mat)) x)))
 
@@ -252,7 +252,7 @@
   `(or mat2 mat3 mat4 matn))
 
 (declaim (inline marr))
-(declaim (ftype (function (mat) (simple-array #.*float-type*)) marr))
+(declaim (ftype (function (mat) (simple-array float-type)) marr))
 (defun marr (mat)
   (etypecase mat
     (mat2 (%marr2 mat))
@@ -261,7 +261,7 @@
     (matn (%marrn mat))))
 
 (declaim (inline miref))
-(declaim (ftype (function (mat (integer 0 #.(expt *matrix-limit* 2))) #.*float-type*) miref))
+(declaim (ftype (function (mat (integer 0 #.(expt *matrix-limit* 2))) float-type) miref))
 (defun miref (mat i)
   (etypecase mat
     (mat2 (miref2 mat i))
@@ -270,7 +270,7 @@
     (matn (mirefn mat i))))
 
 (declaim (inline mcref))
-(declaim (ftype (function (mat mat-dim mat-dim) #.*float-type*) mcref))
+(declaim (ftype (function (mat mat-dim mat-dim) float-type) mcref))
 (defun mcref (mat y x)
   (etypecase mat
     (mat2 (mcref2 mat y x))

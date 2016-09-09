@@ -23,9 +23,12 @@
 (deftype mat-dim ()
   '(integer 0 #.(1- *matrix-limit*)))
 
+(deftype float-type ()
+  '#.*float-type*)
+
 (defmacro define-ofun (name args &body body)
   `(defun ,name ,args
-     (declare (optimize (compilation-speed 0) (debug 0) (safety 1) (space 3) speed))
+     (declare (optimize (compilation-speed 0) (debug 0) (safety 1) space speed))
      ,@body))
 
 (declaim (inline ensure-float))

@@ -393,7 +393,7 @@
     (matn (map-into (%marrn mat) op (%marrn mat)) mat)))
 
 ;; Lots of juicy inlined crap.
-(declaim (ftype (function (mat) #.*float-type*) mdet))
+(declaim (ftype (function (mat) float-type) mdet))
 (define-ofun mdet (m)
   (with-fast-matcase (e m)
     (mat2 (- (* (e 0 0) (e 1 1))
@@ -420,7 +420,7 @@
             (declare (ignore P))
             (with-fast-matref (lu LU (%rows LU))
               (loop for det = #.(ensure-float 1) then (* (expt -1.0 (the integer s))
-                                                         (the #.*float-type* det)
+                                                         (the float-type det)
                                                          (lu i i))
                     for i from 0 below (%rows LU)
                     finally (return det)))))))
@@ -494,7 +494,7 @@
               (dotimes (x (%cols m))
                 (setf (mcrefn r x y) (mcrefn m y x))))))))
 
-(declaim (ftype (function (mat) #.*float-type*) mtrace))
+(declaim (ftype (function (mat) float-type) mtrace))
 (define-ofun mtrace (m)
   (with-fast-matcase (e m)
     (mat2 (+ (e 0 0) (e 1 1)))
@@ -502,9 +502,9 @@
     (mat4 (+ (e 0 0) (e 1 1) (e 2 2) (e 3 3)))
     (matn (let ((sum #.(ensure-float 0)))
             (do-mat-diag (i el m sum)
-              (setf sum (+ el (the #.*float-type* sum))))))))
+              (setf sum (+ el (the float-type sum))))))))
 
-(declaim (ftype (function (mat mat-dim mat-dim) #.*float-type*) mcoefficient))
+(declaim (ftype (function (mat mat-dim mat-dim) float-type) mcoefficient))
 (defun mcoefficient (m y x)
   (error "COEFFICIENT CALCULATION NOT IMPLEMENTED YET. FIX IT, STUPID."))
 
@@ -637,7 +637,7 @@
     (mat
      (let* ((c (mrows m))
             (sum #.(ensure-float 0)))
-       (declare (type #.*float-type* sum))
+       (declare (type float-type sum))
        (multiple-value-bind (LU P s) (mpivot m)
          (with-fast-matref (lu LU c)
            (dotimes (j c)
@@ -682,7 +682,7 @@
 
 (define-ofun m2norm (m)
   (sqrt (let ((sum #.(ensure-float 0)))
-          (declare (type #.*float-type* sum))
+          (declare (type float-type sum))
           (do-mat-index (i el m sum)
             (incf sum (expt el 2))))))
 
