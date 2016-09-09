@@ -627,11 +627,11 @@
     ;; We're using the Crout method for LU decomposition.
     ;; See https://en.wikipedia.org/wiki/Crout_matrix_decomposition
     (mat
-     (let* ((c (%rows m))
+     (let* ((c (mrows m))
             (sum #.(ensure-float 0)))
        (declare (type #.*float-type* sum))
        (multiple-value-bind (LU P s) (mpivot m)
-         (with-fast-matrefs ((lu LU c))
+         (with-fast-matref (lu LU c)
            (dotimes (j c)
              (setf sum #.(ensure-float 0))
              (loop for i from 0 to j
