@@ -56,7 +56,7 @@
     `(flet ((,iter (,arr ,s)
               (dotimes (,i ,s ,result)
                 (declare (ignorable ,i))
-                (symbol-macrolet ((,el (aref ,arr (+ ,i (* ,i ,s)))))
+                (symbol-macrolet ((,el (aref ,arr ,i)))
                   ,@body))))
        (declare (inline ,iter))
        (let ((,m ,mat))
