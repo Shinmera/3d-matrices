@@ -599,8 +599,8 @@
                        (setf max el)
                        (setf index j))))
           (when (= 0 max)
-            (error "The matrix~%  ~a~%is singular in column ~a. A pivot cannot be constructed for it."
-                   m i))
+            (error "The matrix~%~a~%is singular in column ~a. A pivot cannot be constructed for it."
+                   (write-matrix m NIL) i))
           ;; Non-diagonal means we swap. Record.
           (when (/= i index)
             (setf s (1+ s))
@@ -613,7 +613,8 @@
     (mat2 (with-fast-matref (e m 2)
             (if (= 0 (mcref m 0 0))
                 (if (= 0 (mcref m 1 0))
-                    (error "Matrix is singular.")
+                    (error "The matrix~%~a~%is singular."
+                           (write-matrix m NIL))
                     (values (mat (e 1 0) (e 1 1)
                                  (/ (e 0 0) (e 1 0)) (- (e 0 1) (/ (* (e 0 0) (e 1 1)) (e 1 0))))
                             (mat 0 1 1 0)
