@@ -655,6 +655,31 @@
       (dotimes (i s m)
         (rotatef (e k i) (e l i))))))
 
+
+(define-ofun m1norm (m)
+  (let ((max #.(ensure-float 0)))
+    (with-fast-matref (e m (mcols m))
+      (dotimes (j (mcols m) max)
+        (let ((col (loop for i from 0 below (mrows m)
+                         sum (abs (e i j)))))
+          (when (< max col)
+            (setf max col)))))))
+
+(define-ofun minorm (m)
+  (let ((max #.(ensure-float 0)))
+    (with-fast-matref (e m (mcols m))
+      (dotimes (i (mcols m) max)
+        (let ((col (loop for j from 0 below (mrows m)
+                         sum (abs (e i j)))))
+          (when (< max col)
+            (setf max col)))))))
+
+(define-ofun m2norm (m)
+  (sqrt (let ((sum #.(ensure-float 0)))
+          (declare (type #.*float-type* sum))
+          (do-mat-index (i el m sum)
+            (incf sum (expt el 2))))))
+
 ;; TODO
 ;; QR, eigenvalues
 ;; upper-triangular
