@@ -94,14 +94,14 @@
   vec)
 
 (declaim (ftype (function (mat mat-dim) vec) mrow))
-(defun mrow (mat n)
+(define-ofun mrow (mat n)
   (with-fast-matcase (e mat)
     (mat2 (vec2 (e n 0) (e n 1)))
     (mat3 (vec3 (e n 0) (e n 1) (e n 2)))
     (mat4 (vec4 (e n 0) (e n 1) (e n 2) (e n 3)))))
 
 (declaim (ftype (function (vec mat mat-dim) vec) (setf mrow)))
-(defun (setf mrow) (vec mat n)
+(define-ofun (setf mrow) (vec mat n)
   (with-fast-matcase (e mat)
     (mat2 (setf (e n 0) (vx vec) (e n 1) (vy vec)))
     (mat3 (setf (e n 0) (vx vec) (e n 1) (vy vec) (e n 2) (vz vec)))
@@ -227,7 +227,7 @@
        (define-ofun ,name (val &rest vals)
          (if vals
              (loop for v in vals
-                   do (,2mat-name val v)
+                   do (setf val (,2mat-name val v))
                    finally (return val))
              (mapplyf val #',op)))
        (define-compiler-macro ,name (val &rest vals)
@@ -245,8 +245,9 @@
   (let ((m (gensym "M")))
     (flet ((unroll (size) (loop for i from 0 below size collect `(* (e ,i) ,b)))
            (unrollm (size) (loop for i from 0 below size
-                                 collect `(+ ,@(loop for j from 0 below size
-                                                     collect `(* (e ,i ,j) (f ,j ,i)))))))
+                                 append (loop for j from 0 below size
+                                              collect `(+ ,@(loop for k from 0 below size
+                                                                  collect `(* (e ,i ,k) (f ,k ,j))))))))
       `(let ((,a (if (vec-p ,a) ,b ,a))
              (,b (if (vec-p ,a) ,a ,b)))
          (with-fast-matcase (e a)
@@ -254,20 +255,20 @@
                    (,*float-type* (mat ,@(unroll 4)))
                    (vec2 (vec2 (+ (* (vx2 ,b) (e 0 0)) (* (vy2 ,b) (e 0 1)))
                                (+ (* (vx2 ,b) (e 1 0)) (* (vy2 ,b) (e 1 1)))))
-                   (mat2 (with-fast-matref (f a 2) (mat ,@(unrollm 2))))))
+                   (mat2 (with-fast-matref (f b 2) (mat ,@(unrollm 2))))))
            (mat3 (etypecase ,b
                    (,*float-type* (mat ,@(unroll 9)))
                    (vec3 (vec3 (+ (* (vx3 ,b) (e 0 0)) (* (vy3 ,b) (e 0 1)) (* (vz3 ,b) (e 0 2)))
                                (+ (* (vx3 ,b) (e 1 0)) (* (vy3 ,b) (e 1 1)) (* (vz3 ,b) (e 1 2)))
                                (+ (* (vx3 ,b) (e 2 0)) (* (vy3 ,b) (e 2 1)) (* (vz3 ,b) (e 2 2)))))
-                   (mat3 (with-fast-matref (f a 3) (mat ,@(unrollm 3))))))
+                   (mat3 (with-fast-matref (f b 3) (mat ,@(unrollm 3))))))
            (mat4 (etypecase ,b
                    (,*float-type* (mat ,@(unroll 16)))
                    (vec4 (vec4 (+ (* (vx4 ,b) (e 0 0)) (* (vy4 ,b) (e 0 1)) (* (vz4 ,b) (e 0 2)) (* (vw4 ,b) (e 0 3)))
                                (+ (* (vx4 ,b) (e 1 0)) (* (vy4 ,b) (e 1 1)) (* (vz4 ,b) (e 1 2)) (* (vw4 ,b) (e 1 3)))
                                (+ (* (vx4 ,b) (e 2 0)) (* (vy4 ,b) (e 2 1)) (* (vz4 ,b) (e 2 2)) (* (vw4 ,b) (e 2 3)))
                                (+ (* (vx4 ,b) (e 3 0)) (* (vy4 ,b) (e 3 1)) (* (vz4 ,b) (e 3 2)) (* (vw4 ,b) (e 3 3)))))
-                   (mat4 (with-fast-matref (f a 4) (mat ,@(unrollm 4))))))
+                   (mat4 (with-fast-matref (f b 4) (mat ,@(unrollm 4))))))
            (matn (etypecase ,b
                    (,*float-type*
                     (let ((,m (matn (%rows ,a) (%cols ,a))))
@@ -292,23 +293,24 @@
   (let ((m (gensym "M")))
     (flet ((unroll (size) (loop for i from 0 below size collect `(* (e ,i) ,b)))
            (unrollm (size) (loop for i from 0 below size
-                                 collect `(+ ,@(loop for j from 0 below size
-                                                     collect `(* (e ,i ,j) (f ,j ,i)))))))
-      `(let ((,a (if (vec-p ,b) ,a ,b))
-             (,b (if (vec-p ,b) ,b ,a)))
+                                 append (loop for j from 0 below size
+                                              collect `(+ ,@(loop for k from 0 below size
+                                                                  collect `(* (e ,i ,k) (f ,k ,j))))))))
+      `(let ((,a (if (vec-p ,a) ,b ,a))
+             (,b (if (vec-p ,a) ,a ,b)))
          (with-fast-matcase (e a)
            (mat2 (etypecase ,b
                    (,*float-type* (mat ,@(unroll 4)))
                    (vec2 (3d-vectors::%vsetf ,b (+ (* (vx2 ,b) (e 0 0)) (* (vy2 ,b) (e 0 1)))
                                                 (+ (* (vx2 ,b) (e 1 0)) (* (vy2 ,b) (e 1 1)))))
-                   (mat2 (with-fast-matref (f ,a 2) (matf ,@(unrollm 2))))))
+                   (mat2 (with-fast-matref (f ,b 2) (matf ,@(unrollm 2))))))
            (mat3 (etypecase ,b
                    (,*float-type* (mat ,@(unroll 9)))
                    (vec3 (3d-vectors::%vsetf ,b
                                              (+ (* (vx3 ,b) (e 0 0)) (* (vy3 ,b) (e 0 1)) (* (vz3 ,b) (e 0 2)))
                                              (+ (* (vx3 ,b) (e 1 0)) (* (vy3 ,b) (e 1 1)) (* (vz3 ,b) (e 1 2)))
                                              (+ (* (vx3 ,b) (e 2 0)) (* (vy3 ,b) (e 2 1)) (* (vz3 ,b) (e 2 2)))))
-                   (mat3 (with-fast-matref (f ,a 3) (matf ,@(unrollm 3))))))
+                   (mat3 (with-fast-matref (f ,b 3) (matf ,@(unrollm 3))))))
            (mat4 (etypecase ,b
                    (,*float-type* (mat ,@(unroll 16)))
                    (vec4 (3d-vectors::%vsetf ,b
@@ -316,7 +318,7 @@
                                              (+ (* (vx4 ,b) (e 1 0)) (* (vy4 ,b) (e 1 1)) (* (vz4 ,b) (e 1 2)) (* (vw4 ,b) (e 1 3)))
                                              (+ (* (vx4 ,b) (e 2 0)) (* (vy4 ,b) (e 2 1)) (* (vz4 ,b) (e 2 2)) (* (vw4 ,b) (e 2 3)))
                                              (+ (* (vx4 ,b) (e 3 0)) (* (vy4 ,b) (e 3 1)) (* (vz4 ,b) (e 3 2)) (* (vw4 ,b) (e 3 3)))))
-                   (mat4 (with-fast-matref (f ,a 4) (matf ,@(unrollm 4))))))
+                   (mat4 (with-fast-matref (f ,b 4) (matf ,@(unrollm 4))))))
            (matn (etypecase ,b
                    (,*float-type*
                     (map-into (%marrn ,a) (lambda (,m) (* (the ,*float-type* ,m)
