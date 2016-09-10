@@ -6,44 +6,38 @@
 
 (in-package #:org.shirakumo.flare.matrix)
 
-(defmacro %mka (&environment env size &key element contents)
-  `(make-array ,size :element-type ',*float-type*
-               ,@(if element
-                     `(:initial-element ,(ensure-float-param element env))
-                     `(:initial-contents ,contents))))
+(defmacro %mka (&environment env size &key (element 0) contents (coercion '#'ensure-float))
+  (let ((arr (gensym "ARRAY")))
+    `(let ((,arr (make-array ,size :element-type ',*float-type*
+                                   :initial-element ,(ensure-float-param element env))))
+       ,(if contents
+            `(map-into ,arr ,coercion ,contents)
+            arr))))
 
 (defmacro %proper-array (size elements)
   `(etypecase ,elements
-     (null (%mka ,size :element ,0))
+     (null (%mka ,size))
      (real (%mka ,size :element ,elements))
-     (sequence (let ((array (%mka ,size :element 0)))
-                 (map-into array #'ensure-float ,elements)))))
+     (sequence (%mka ,size :contents ,elements))))
 
 (defun %proper-array-form (size elements)
   (let ((el (gensym "ELEMENTS")))
-    (cond ((or (typep elements 'vector)
+    (cond ((null elements)
+           `(%mka ,size))
+          ((numberp elements)
+           `(%mka ,size :element ,elements))
+          ((or (typep elements 'vector)
                (and (typep elements 'list)
                     (eql (first elements) 'quote)
                     (listp (second elements))))
            `(%mka ,size :contents (load-time-value
-                                   (map 'list #'ensure-float ,elements))))
-          ((null elements)
-           `(%mka ,size :element 0))
-          ((numberp size)
-           `(%mka ,size :contents (load-time-value
-                                   (let ((,el ,elements))
-                                     (etypecase ,el
-                                       (null (make-list ,size :initial-element (ensure-float 0)))
-                                       (real (make-list ,size :initial-element (ensure-float ,el)))
-                                       (sequence (map 'list #'ensure-float ,el)))))))
+                                   (map 'list #'ensure-float ,elements))
+                        :coercion #'identity))
           ;; There's other cases but we can't really catch them because typep is not
           ;; actually useful. Ah well, this will have to be good enough for most.
           (T
            `(let ((,el ,elements))
-              (etypecase ,el
-                (real (%mka ,size :element ,el))
-                (sequence (let ((array (%mka ,size :element 0)))
-                            (map-into array #'ensure-float ,el)))))))))
+              (%proper-array ,size ,el))))))
 
 (defmacro define-describe-matrix (type)
   `(defmethod describe-object ((a ,type) stream)
