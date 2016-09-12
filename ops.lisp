@@ -658,7 +658,7 @@
   (mat 1 0 0 (vx3 v)
        0 1 0 (vy3 v)
        0 0 1 (vz3 v)
-       0 0 0       1))
+       0 0 0 1))
 
 (declaim (ftype (function (vec3) mat4) mscaling))
 (define-ofun mscaling (v)
@@ -693,7 +693,22 @@
                (mat (+ c (* x x c))       (- (* x y c) (* z s)) (+ (* x z c) (* y s)) 0
                     (+ (* y x c) (* z s)) (+ c (* y y c))       (- (* y z c) (* x s)) 0
                     (- (* z x c) (* y s)) (+ (* z y c) (* x s)) (+ c (* z z c))       0
-                                        0                     0               0       1)))))))
+                    0                     0                     0                     1)))))))
+
+(declaim (ftype (function (mat4 vec3) mat4) nmtranslate))
+(define-ofun nmtranslate (m v)
+  (declare (inline mtranslation))
+  (nm* m (mtranslation v)))
+
+(declaim (ftype (function (mat4 vec3) mat4) nmscale))
+(define-ofun nmscale (m v)
+  (declare (inline mscaling))
+  (nm* m (mscaling v)))
+
+(declaim (ftype (function (mat4 vec3 real) mat4) nmrotate))
+(define-ofun nmrotate (m v angle)
+  (declare (inline mrotation))
+  (nm* m (mrotation v angle)))
 
 (define-ofun m1norm (m)
   (let ((max #.(ensure-float 0)))
