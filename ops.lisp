@@ -653,6 +653,48 @@
                       (setf (lu i j) (/ (- (lu i j) sum) (lu j j))))))
          (values LU P s))))))
 
+(declaim (ftype (function (vec3) mat4) mtranslation))
+(define-ofun mtranslation (v)
+  (mat 1 0 0 (vx3 v)
+       0 1 0 (vy3 v)
+       0 0 1 (vz3 v)
+       0 0 0       1))
+
+(declaim (ftype (function (vec3) mat4) mscaling))
+(define-ofun mscaling (v)
+  (mat (vx3 v) 0 0 0
+       0 (vy3 v) 0 0
+       0 0 (vz3 v) 0
+       0 0 0       1))
+
+(declaim (ftype (function (vec3 real) mat4) mrotation))
+(define-ofun mrotation (v angle)
+  (let* ((angle (ensure-float angle))
+         (c (cos angle))
+         (s (sin angle)))
+    (cond ((v= +vx+ v)
+           (mat 1 0 0 0
+                0 c (- s) 0
+                0 s c 0
+                0 0 0 1))
+          ((v= +vy+ v)
+           (mat c 0 s 0
+                0 1 0 0
+                (- s) 0 c 0
+                0 0 0 1))
+          ((v= +vz+ v)
+           (mat c (- s) 0 0
+                s c 0 0
+                0 0 1 0
+                0 0 0 1))
+          (T
+           (let ((c (- 1 c)))
+             (with-vec3 (x y z) v
+               (mat (+ c (* x x c))       (- (* x y c) (* z s)) (+ (* x z c) (* y s)) 0
+                    (+ (* y x c) (* z s)) (+ c (* y y c))       (- (* y z c) (* x s)) 0
+                    (- (* z x c) (* y s)) (+ (* z y c) (* x s)) (+ c (* z z c))       0
+                                        0                     0               0       1)))))))
+
 (define-ofun m1norm (m)
   (let ((max #.(ensure-float 0)))
     (with-fast-matref (e m (mcols m))
