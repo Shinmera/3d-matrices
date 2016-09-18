@@ -150,32 +150,43 @@
 
 (defmacro define-matcomp (name op &optional (comb 'and))
   (let ((2mat-name (intern (format NIL "~a-~a" '2mat name))))
-    `(progn
-       (declaim (ftype (function ((or mat real) (or mat real)) boolean) ,2mat-name))
-       (declaim (ftype (function ((or mat real) &rest (or mat real)) boolean) ,name))
-       (define-ofun ,2mat-name (a b)
-         (let ((a (if (realp a) b a))
-               (b (if (realp a) a b)))
-           (let ((b (if (realp b) (ensure-float b) b)))
-             (%2mat-op a b ,op ,comb ,comb ,comb
-                       (with-fast-matrefs ((e a (%cols a))
-                                           (f b (%cols b)))
-                         (loop for i from 0 below (* (%cols a) (%rows a))
-                               ,(ecase comb (and 'always) (or 'thereis)) (,op (e i) (f i))))
-                       (with-fast-matref (e a (%cols a))
-                         (loop for i from 0 below (* (%cols a) (%rows a))
-                               ,(ecase comb (and 'always) (or 'thereis)) (,op (e i) b)))))))
-       (define-ofun ,name (val &rest vals)
-         (loop for prev = val then next
-               for next in vals
-               always (,2mat-name prev next)))
-       (define-compiler-macro ,name (val &rest vals)
-         (case (length vals)
-           (0 T)
-           (1 `(,',2mat-name ,val ,(first vals)))
-           (T `(and ,@(loop for prev = val then next
-                            for next in vals
-                            collect `(,',2mat-name ,prev ,next)))))))))
+    (flet ((unroll (size)
+             (loop for i from 0 below size
+                   collect `(,op a (e ,i)))))
+      `(progn
+         (declaim (ftype (function ((or mat real) (or mat real)) boolean) ,2mat-name))
+         (declaim (ftype (function ((or mat real) &rest (or mat real)) boolean) ,name))
+         (define-ofun ,2mat-name (a b)
+           (cond ((realp a)
+                  (let ((a (ensure-float a)))
+                    (with-fast-matcase (e b)
+                      (mat4 (,comb ,@(unroll 16)))
+                      (mat3 (,comb ,@(unroll 9)))
+                      (mat2 (,comb ,@(unroll 4)))
+                      (matn (with-fast-matref (e b (%cols b))
+                              (loop for i from 0 below (* (%rows b) (%cols b))
+                                    ,(ecase comb (and 'always) (or 'thereis)) (,op a (e i))))))))
+                 (T
+                  (let ((b (if (realp b) (ensure-float b) b)))
+                    (%2mat-op a b ,op ,comb ,comb ,comb
+                              (with-fast-matrefs ((e a (%cols a))
+                                                  (f b (%cols b)))
+                                (loop for i from 0 below (* (%cols a) (%rows a))
+                                      ,(ecase comb (and 'always) (or 'thereis)) (,op (e i) (f i))))
+                              (with-fast-matref (e a (%cols a))
+                                (loop for i from 0 below (* (%cols a) (%rows a))
+                                      ,(ecase comb (and 'always) (or 'thereis)) (,op (e i) b))))))))
+         (define-ofun ,name (val &rest vals)
+           (loop for prev = val then next
+                 for next in vals
+                 always (,2mat-name prev next)))
+         (define-compiler-macro ,name (val &rest vals)
+           (case (length vals)
+             (0 T)
+             (1 `(,',2mat-name ,val ,(first vals)))
+             (T `(and ,@(loop for prev = val then next
+                              for next in vals
+                              collect `(,',2mat-name ,prev ,next))))))))))
 
 (define-matcomp m= =)
 (define-matcomp m/= /= or)
