@@ -343,15 +343,15 @@
                       (with-fast-matrefs ((e ,a s)
                                           (f ,b s)
                                           (g ,u s))
-                        (dotimes (i s)
+                        (dotimes (,(if (eq u a) 'i 'j) s)
                           (loop for sum of-type ,*float-type* = ,(ensure-float 0)
-                                for j from 0 below s
+                                for ,(if (eq u a) 'j 'i) from 0 below s
                                 do (loop for k from 0 below s
                                          do (setf sum (+ (* (e i k) (f k j)) sum)))
-                                   (setf (aref ,m j) sum))
-                          (loop for j from 0 below s
-                                do (setf (g i j) (aref ,m j))))))))
-                 ,a))))))
+                                   (setf (aref ,m ,(if (eq u a) 'j 'i)) sum))
+                          (loop for ,(if (eq u a) 'j 'i) from 0 below s
+                                do (setf (g i j) (aref ,m ,(if (eq u a) 'j 'i)))))))))
+                 ,u))))))
 
 (defmacro %2n*mat-expansion (a b)
   `(%2nmat*-expansion ,a ,b ,b))
