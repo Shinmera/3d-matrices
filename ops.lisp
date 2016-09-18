@@ -309,23 +309,23 @@
                                  append (loop for j from 0 below size
                                               collect `(+ ,@(loop for k from 0 below size
                                                                   collect `(* (e ,i ,k) (f ,k ,j))))))))
-      `(let ((,a (if (vec-p ,a) ,b ,a))
-             (,b (if (vec-p ,a) ,a ,b)))
+      `(let ((,a (if (or (realp ,a) (vec-p ,a)) ,b ,a))
+             (,b (if (or (realp ,a) (vec-p ,a)) ,a ,b)))
          (with-fast-matcase (e a)
            (mat2 (etypecase ,b
-                   (,*float-type* (matf ,@(unroll 4)))
+                   (,*float-type* (matf ,a ,@(unroll 4)))
                    (vec2 (3d-vectors::%vsetf ,b (+ (* (vx2 ,b) (e 0 0)) (* (vy2 ,b) (e 0 1)))
                                                 (+ (* (vx2 ,b) (e 1 0)) (* (vy2 ,b) (e 1 1)))))
                    (mat2 (with-fast-matref (f ,b 2) (matf ,u ,@(unrollm 2))))))
            (mat3 (etypecase ,b
-                      (,*float-type* (matf ,@(unroll 9)))
+                      (,*float-type* (matf ,a ,@(unroll 9)))
                       (vec3 (3d-vectors::%vsetf ,b
                                                 (+ (* (vx3 ,b) (e 0 0)) (* (vy3 ,b) (e 0 1)) (* (vz3 ,b) (e 0 2)))
                                                 (+ (* (vx3 ,b) (e 1 0)) (* (vy3 ,b) (e 1 1)) (* (vz3 ,b) (e 1 2)))
                                                 (+ (* (vx3 ,b) (e 2 0)) (* (vy3 ,b) (e 2 1)) (* (vz3 ,b) (e 2 2)))))
                       (mat3 (with-fast-matref (f ,b 3) (matf ,u ,@(unrollm 3))))))
            (mat4 (etypecase ,b
-                   (,*float-type* (matf ,@(unroll 16)))
+                   (,*float-type* (matf ,a ,@(unroll 16)))
                    (vec4 (3d-vectors::%vsetf ,b
                                              (+ (* (vx4 ,b) (e 0 0)) (* (vy4 ,b) (e 0 1)) (* (vz4 ,b) (e 0 2)) (* (vw4 ,b) (e 0 3)))
                                              (+ (* (vx4 ,b) (e 1 0)) (* (vy4 ,b) (e 1 1)) (* (vz4 ,b) (e 1 2)) (* (vw4 ,b) (e 1 3)))
