@@ -79,6 +79,14 @@
          (do-mat-diag (i e mat mat)
            (setf e #.(ensure-float 1)))))))
 
+(declaim (ftype (function (mat-dim mat-dim &key (:min float-type) (:max float-type)) mat) mrand))
+(define-ofun mrand (r c &key (min 0) (max 1))
+  (let ((mat (matn r c))
+        (min (ensure-float min))
+        (max (ensure-float max)))
+    (map-into (marr mat) (lambda () (+ min (random (- max min)))))
+    mat))
+
 (declaim (ftype (function (mat mat-dim) vec) mcol))
 (define-ofun mcol (mat n)
   (with-fast-matcase (e mat)

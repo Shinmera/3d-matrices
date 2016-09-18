@@ -14,6 +14,7 @@
    #:with-fast-matrefs
    #:with-fast-matcase
    #:meye
+   #:mrand
    #:mcol
    #:mrow
    #:m=
