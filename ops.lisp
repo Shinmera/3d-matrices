@@ -294,12 +294,12 @@
                     (let ((,m (matn (%rows ,a) (%cols ,b))))
                       (with-fast-matrefs ((e ,a (%cols ,a))
                                           (f ,b (%cols ,b))
-                                          (g ,m (%cols ,m)))
-                        (dotimes (i (%rows ,m) ,m)
+                                          (g ,m (%cols ,b)))
+                        (dotimes (i (%rows ,a) ,m)
                           (loop for sum = ,(ensure-float 0)
-                                for j from 0 below (%cols ,m)
+                                for j from 0 below (%cols ,b)
                                 do (loop for k from 0 below (%cols ,a)
-                                         do (setf sum (+ (* (e i k) (f k i)) sum)))
+                                         do (setf sum (+ (* (e i k) (f k j)) sum)))
                                    (setf (g i j) sum)))))))))))))
 
 (defmacro %2nmat*-expansion (a b &optional (u a))
@@ -337,7 +337,7 @@
                     (map-into (%marrn ,a) (lambda (,m) (* (the ,*float-type* ,m)
                                                           (the ,*float-type* ,b))) (%marrn ,a)))
                    (matn
-                    (assert (and (= (%rows ,a) (%cols ,a) (%cols ,b) (%rows ,b))))
+                    (assert (= (%rows ,a) (%cols ,a) (%cols ,b) (%rows ,b)))
                     (let ((,m (make-array (%cols ,a) :initial-element ,(ensure-float 0) :element-type ',*float-type*))
                           (s (%rows ,a)))
                       (with-fast-matrefs ((e ,a s)
@@ -347,7 +347,7 @@
                           (loop for sum of-type ,*float-type* = ,(ensure-float 0)
                                 for j from 0 below s
                                 do (loop for k from 0 below s
-                                         do (setf sum (+ (* (e i k) (f k i)) sum)))
+                                         do (setf sum (+ (* (e i k) (f k j)) sum)))
                                    (setf (aref ,m j) sum))
                           (loop for j from 0 below s
                                 do (setf (g i j) (aref ,m j))))))))
