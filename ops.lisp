@@ -87,6 +87,10 @@
     (map-into (marr mat) (lambda () (+ min (random (- max min)))))
     mat))
 
+(declaim (ftype (function (mat-dim mat-dim real) mat) muniform))
+(define-ofun muniform (r c element)
+  (matn r c element))
+
 (declaim (ftype (function (mat mat-dim) vec) mcol))
 (define-ofun mcol (mat n)
   (with-fast-matcase (e mat)

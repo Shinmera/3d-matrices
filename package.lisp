@@ -15,6 +15,7 @@
    #:with-fast-matcase
    #:meye
    #:mrand
+   #:muniform
    #:mcol
    #:mrow
    #:m=
