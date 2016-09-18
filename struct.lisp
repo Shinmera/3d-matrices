@@ -372,18 +372,18 @@
      (ecase format
        (:nice
         (dotimes (i (mrows m))
-          (cond ((= i 0)
-                 (write-string "┌ " stream))
-                ((< i (1- (mrows m)))
+          (cond ((or (= (mrows m) 1) (< 0 i (1- (mrows m))))
                  (write-string "│ " stream))
+                ((= i 0)
+                 (write-string "┌ " stream))
                 (T
                  (write-string "└ " stream)))
           (dotimes (j (mcols m))
             (format stream "~10,3@e " (mcref m i j)))
-          (cond ((= i 0)
-                 (write-string "┐" stream))
-                ((< i (1- (mrows m)))
+          (cond ((or (= (mrows m) 1) (< 0 i (1- (mrows m))))
                  (write-string "│" stream))
+                ((= i 0)
+                 (write-string "┐" stream))
                 (T
                  (write-string "┘" stream)))
           (unless (= i (1- (mrows m)))
