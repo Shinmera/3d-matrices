@@ -245,6 +245,11 @@
 (deftype mat ()
   `(or mat2 mat3 mat4 matn))
 
+(declaim (inline mat-p))
+(declaim (ftype (function (mat) boolean) mat-p))
+(defun mat-p (mat)
+  (typep mat 'mat))
+
 (declaim (inline marr))
 (declaim (ftype (function (mat) (simple-array float-type)) marr))
 (defun marr (mat)
