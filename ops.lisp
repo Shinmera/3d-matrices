@@ -79,7 +79,7 @@
          (do-mat-diag (i e mat mat)
            (setf e #.(ensure-float 1)))))))
 
-(declaim (ftype (function (mat-dim mat-dim &key (:min float-type) (:max float-type)) mat) mrand))
+(declaim (ftype (function (mat-dim mat-dim &key (:min real) (:max real)) mat) mrand))
 (define-ofun mrand (r c &key (min 0) (max 1))
   (let ((mat (matn r c))
         (min (ensure-float min))
