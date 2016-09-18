@@ -206,10 +206,14 @@
 (define-test transforms
   :parent 3d-matrices
   :depends-on (comparison)
-  ;; mtranslation
-  ;; mscaling
-  ;; mrotation
-  ;; nmtranslate
-  ;; nmscale
-  ;; nmrotate
-  )
+  (is m= (mat 1 0 0 5 0 1 0 6 0 0 1 7 0 0 0 1) (mtranslation (vec 5 6 7)))
+  (is m= (mat 5 0 0 0 0 6 0 0 0 0 7 0 0 0 0 1) (mscaling (vec 5 6 7)))
+  (let ((c (cos 90))
+        (s (sin 90)))
+    (is m= (mat 1 0 0 0 0 c (- s) 0 0 s c 0 0 0 0 1) (mrotation (vec 1 0 0) 90))
+    (is m= (mat c 0 s 0 0 1 0 0 (- s) 0 c 0 0 0 0 1) (mrotation (vec 0 1 0) 90))
+    (is m= (mat c (- s) 0 0 s c 0 0 0 0 1 0 0 0 0 1) (mrotation (vec 0 0 1) 90)))
+  (let ((mat (mat 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5)))
+    (is m= (mat  0  1  2 11  4  5  6 39  8  9  0 27  2  3  4 25) (nmtranslate mat (vec 1 2 3)))
+    (is m= (mat  0  1  0 11  8  5  0 39 16  9  0 27  4  3  0 25) (nmscale mat (vec 2 1 0)))
+    #|(is m= (mat ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ?) (nmrotate mat (vec 0 1 0) 90))|#))
