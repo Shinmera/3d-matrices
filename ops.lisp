@@ -366,15 +366,15 @@
 
 ;; We only allow element-wise division.
 (defmacro %2mat/-expansion (a b)
-  `(%2nmat/-expansion ,a ,b mat (matn (%rows ,a) (%cols ,a))))
+  `(%2nmat/-expansion ,a ,b (mat) (matn (%rows ,a) (%cols ,a))))
 
-(defmacro %2nmat/-expansion (a b &optional (mc 'matf) (mn a))
+(defmacro %2nmat/-expansion (a b &optional (mc `(matf ,a)) (mn a))
   (let ((m (gensym "M")))
     (flet ((unroll (size) (loop for i from 0 below size collect `(/ (e ,i) ,b))))
       `(with-fast-matcase (e ,a)
-         (mat2 (etypecase ,b (,*float-type* (,mc ,@(unroll 4)))))
-         (mat3 (etypecase ,b (,*float-type* (,mc ,@(unroll 9)))))
-         (mat4 (etypecase ,b (,*float-type* (,mc ,@(unroll 16)))))
+         (mat2 (etypecase ,b (,*float-type* (,@mc ,@(unroll 4)))))
+         (mat3 (etypecase ,b (,*float-type* (,@mc ,@(unroll 9)))))
+         (mat4 (etypecase ,b (,*float-type* (,@mc ,@(unroll 16)))))
          (matn (etypecase ,b (,*float-type* (let ((,m ,mn))
                                               (map-into (%marrn ,m) (lambda (,m) (* (the ,*float-type* ,m) ,b)) (%marrn ,a))
                                               ,mn))))))))
