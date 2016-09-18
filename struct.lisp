@@ -211,7 +211,7 @@
           (3 (%mat3 arr))
           (4 (%mat4 arr))
           (T (%matn r r arr)))
-        (%matn c r arr))))
+        (%matn r c arr))))
 
 (define-compiler-macro matn (&whole whole &environment env r c &optional elements)
   (cond ((constantp elements env)
