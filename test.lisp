@@ -10,6 +10,9 @@
   (:use #:cl #:parachute #:3d-matrices #:3d-vectors))
 (in-package #:org.shirakumo.flare.matrix.test)
 
+(defun ~= (a b)
+  (< (abs (- a b)) 0.00001))
+
 (define-test 3d-matrices)
 
 (define-test struct
@@ -187,21 +190,46 @@
 (define-test matrix-math
   :parent 3d-matrices
   :depends-on (comparison)
-  ;; mdet
-  ;; minv
-  ;; mtranspose
-  ;; mtrace
-  ;; mcoefficient
-  ;; mcov
-  ;; madj
-  ;; mpivot
-  ;; mlu
-  ;; m1norm
-  ;; minorm
-  ;; m2norm
-  ;; mqr
-  ;; meigen
-  )
+  (is m= (mat 1 1 1 3 -1 -1 4 0 -1) (mlu (mat 1 1 1 3 2 2 4 4 3) NIL))
+  (is m= (mat 4 4 3 0.75 -1 -0.25 0.25 0 0.25) (mlu (mat 1 1 1 3 2 2 4 4 3) T))
+  (is ~= -2 (mdet (mat 1 2 3 4)))
+  (is ~=  0 (mdet (mat 1 2 3 4 5 6 7 8 9)))
+  (is ~=  0 (mdet (mat 1 2 3 4 5 6 7 8 9 1 2 3 4 5 6 7)))
+  (is ~= -1 (mdet (mat 1 1 1 1 3 2 2 2 4 4 3 3 5 5 5 4)))
+  (is ~= 1 (mdet (mat 1 1 1 1 1 3 2 2 2 2 4 4 3 3 3 5 5 5 4 4 6 6 6 6 5)))
+  (is m= (mat -2 1 1.5 -0.5) (minv (mat 1 2 3 4)))
+  (fail (minv (mat 1 2 3 4 5 6 7 8 9)))
+  (fail (minv (mat 1 2 3 4 5 6 7 8 9 1 2 3 4 5 6 7)))
+  (is m= (mat -2 1 0 0 -1 -1 1 0 -1 0 -1 1 5 0 0 -1) (minv (mat 1 1 1 1 3 2 2 2 4 4 3 3 5 5 5 4)))
+  (is m= (meye 5) (mtranspose (meye 5)))
+  (is m= (mat4 1) (mtranspose (mat4 1)))
+  (is m= (mat 1 4 7 2 5 8 3 6 9) (mtranspose (mat 1 2 3 4 5 6 7 8 9)))
+  (is ~= 10 (mtrace (mat 1 1 1 1 3 2 2 2 4 4 3 3 5 5 5 4)))
+  (is ~= 15 (mtrace (mat 1 1 1 1 1 3 2 2 2 2 4 4 3 3 3 5 5 5 4 4 6 6 6 6 5)))
+  ;; mcof
+  (is m= (mat 2 -1 0 0 1 1 -1 0 1 0 1 -1 -5 0 0 1) (madj (mat 1 1 1 1 3 2 2 2 4 4 3 3 5 5 5 4)))
+  (is m= (mat 2 1 1 1) (mpivot (mat 2 1 1 1)))
+  (is m= (mat 1 0 0 1) (nth-value 1 (mpivot (mat 2 1 1 1))))
+  (is =  0 (nth-value 2 (mpivot (mat 2 1 1 1))))
+  (is m= (mat 2 1 1 1) (mpivot (mat 1 1 2 1)))
+  (is m= (mat 0 1 1 0) (nth-value 1 (mpivot (mat 1 1 2 1))))
+  (is =  1 (nth-value 2 (mpivot (mat 1 1 2 1))))
+  (is m= (mat 6 1 1 1 1 5 1 1 1 1 3 1 1 1 1 2 1 1 1 1 1 1 1 1 1)
+      (mpivot (mat 1 1 1 1 1 5 1 1 1 1 3 1 1 1 1 2 1 1 1 1 6 1 1 1 1)))
+  (is ~= 18 (m1norm (mat 1 2 3 4 5 6 7 8 9)))
+  (is ~= 24 (minorm (mat 1 2 3 4 5 6 7 8 9)))
+  (is ~= (sqrt 285) (m2norm (mat 1 2 3 4 5 6 7 8 9)))
+  (multiple-value-bind (Q R) (mqr (mat 1 1 1 3 2 2 4 4 3))
+    (is m~= (mat 0.19611613  0.14269547  0.9701426
+                 0.58834845 -0.80860764  7.450581e-9
+                 0.78446454  0.5707819  -0.24253567) Q)
+    (is m~= (mat 5.0990195 4.510671  3.7262068
+                 0.0       0.8086077 0.23782583
+                 0.0       0.0       0.24253565) R))
+  (let ((values (meigen (mat 1 1 1 3 2 2 4 4 3) 50)))
+    (is ~= 6.6264195 (first values))
+    (is ~= -0.39977652 (second values))
+    (is ~= -0.22664261 (third values))))
 
 (define-test transforms
   :parent 3d-matrices
@@ -216,4 +244,5 @@
   (let ((mat (mat 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5)))
     (is m= (mat  0  1  2 11  4  5  6 39  8  9  0 27  2  3  4 25) (nmtranslate mat (vec 1 2 3)))
     (is m= (mat  0  1  0 11  8  5  0 39 16  9  0 27  4  3  0 25) (nmscale mat (vec 2 1 0)))
-    #|(is m= (mat ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ?) (nmrotate mat (vec 0 1 0) 90))|#))
+    (is m~= (mat 0.0 1.0 0.0 11.0 -3.584589 5.0 7.1519732 39.0 -7.169178 9.0 14.3039465 27.0
+                 -1.7922945 3.0 3.5759866 25.0) (nmrotate mat (vec 0 1 0) 90))))
