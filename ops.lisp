@@ -638,39 +638,40 @@
             (nmswap-row p i index)
             (nmswap-row r i index)))))))
 
-(declaim (ftype (function (mat) (values mat mat mat-dim)) mlu))
-(define-ofun mlu (m)
+(declaim (ftype (function (mat &optional boolean) (values mat mat mat-dim)) mlu))
+(define-ofun mlu (m &optional (pivot T))
   (etypecase m
     (mat2 (with-fast-matref (e m 2)
-            (if (= 0 (mcref m 0 0))
-                (if (= 0 (mcref m 1 0))
-                    (error "The matrix~%~a~%is singular."
-                           (write-matrix m NIL))
-                    (values (mat (e 1 0) (e 1 1)
-                                 (/ (e 0 0) (e 1 0)) (- (e 0 1) (/ (* (e 0 0) (e 1 1)) (e 1 0))))
-                            (mat 0 1 1 0)
-                            1))
-                (values (mat (e 0 0) (e 0 1) (/ (e 1 0) (e 0 0))
-                             (- (e 1 1) (/ (* (e 0 1) (e 1 0)) (e 0 0))))
-                        (mat 1 0 0 1)
-                        0))))
+            (cond ((or (/= 0 (e 0 0)) (not pivot))
+                   (values (mat (e 0 0) (e 0 1) (/ (e 1 0) (e 0 0))
+                                (- (e 1 1) (/ (* (e 0 1) (e 1 0)) (e 0 0))))
+                           (mat 1 0 0 1)
+                           0))
+                  ((/= 0 (e 1 0))
+                   (values (mat (e 1 0) (e 1 1)
+                                (/ (e 0 0) (e 1 0)) (- (e 0 1) (/ (* (e 0 0) (e 1 1)) (e 1 0))))
+                           (mat 0 1 1 0)
+                           1))
+                  (T
+                   (error "The matrix~%~a~%is singular."
+                          (write-matrix m NIL))))))
     ;; Not worth the pain to inline it anymore. Just do the generic variant.
     ;; We're using the Crout method for LU decomposition.
     ;; See https://en.wikipedia.org/wiki/Crout_matrix_decomposition
     (mat
-     (let* ((c (mrows m))
-            (sum #.(ensure-float 0)))
-       (declare (type float-type sum))
-       (multiple-value-bind (LU P s) (mpivot m)
+     (let* ((c (mrows m)))
+       (multiple-value-bind (LU P s) (if pivot
+                                         (mpivot m)
+                                         (values (mcopy m) (meye c) 0))
          (with-fast-matref (lu LU c)
            (dotimes (j c)
-             (setf sum #.(ensure-float 0))
              (loop for i from 0 to j
+                   for sum of-type #.*float-type* = #.(ensure-float 0)
                    do (loop for k from 0 below i
                             do (incf sum (* (lu i k) (lu k j))))
                       (setf (lu i j) (- (lu i j) sum)))
-             (setf sum #.(ensure-float 0))
              (loop for i from (1+ j) below c
+                   for sum of-type #.*float-type* = #.(ensure-float 0)
                    do (loop for k from 0 below j
                             do (incf sum (* (lu i k) (lu k j))))
                       (setf (lu i j) (/ (- (lu i j) sum) (lu j j))))))
