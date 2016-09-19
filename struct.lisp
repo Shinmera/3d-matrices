@@ -407,5 +407,5 @@
           (write-string ")" stream)
           (unless (= i (1- (mrows m)))
             (write-string " " stream)))
-        (write-string ")" stream)))))
-  m)
+        (write-string ")" stream)))
+     m)))
