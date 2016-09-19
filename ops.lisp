@@ -792,9 +792,40 @@
             (incf sum (expt el 2))))))
 
 (declaim (ftype (function (mat) (values mat mat)) mqr))
-(define-ofun mqr (m)
-  ;; Some day.
-  )
+(define-ofun mqr (mat)
+  (let* ((m (mrows mat))
+         (n (mcols mat))
+         (Q (meye m))
+         (R (mcopy mat))
+         (G (meye m)))
+    (with-fast-matrefs ((g G m)
+                        (r R m))
+      (dotimes (j n (values Q R))
+        (loop for i downfrom (1- m) above j
+              for a of-type #.*float-type* = (r (1- i) j)
+              for b of-type #.*float-type* = (r     i  j)
+              for c of-type #.*float-type* = #.(ensure-float 0)
+              for s of-type #.*float-type* = #.(ensure-float 0)
+              do (cond ((= 0 b) (setf c #.(ensure-float 1)))
+                       ((= 0 a) (setf s #.(ensure-float 1)))
+                       ((< (abs a) (abs b))
+                        (let ((r (/ a b)))
+                          (setf s (/ (sqrt (1+ (* r r)))))
+                          (setf c (* s r))))
+                       (T
+                        (let ((r (/ b a)))
+                          (setf c (/ (sqrt (1+ (* r r)))))
+                          (setf s (* c r)))))
+                 (setf (g (1- i) (1- i)) c
+                       (g (1- i)     i)  (- s)
+                       (g     i  (1- i)) s
+                       (g     i      i)  c)
+                 (n*m (mtranspose G) R)
+                 (nm* Q G)
+                 (setf (g (1- i) (1- i)) #.(ensure-float 1)
+                       (g (1- i)     i)  #.(ensure-float 0)
+                       (g     i  (1- i)) #.(ensure-float 0)
+                       (g     i      i)  #.(ensure-float 1)))))))
 
 (declaim (ftype (function (mat &optional (integer 0)) list) meigen))
 (defun meigen (m &optional (iterations 20))
