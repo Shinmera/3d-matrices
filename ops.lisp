@@ -659,23 +659,55 @@
     ;; We're using the Crout method for LU decomposition.
     ;; See https://en.wikipedia.org/wiki/Crout_matrix_decomposition
     (mat
-     (let* ((c (mrows m)))
-       (multiple-value-bind (LU P s) (if pivot
-                                         (mpivot m)
-                                         (values (mcopy m) (meye c) 0))
-         (with-fast-matref (lu LU c)
-           (dotimes (j c)
-             (loop for i from 0 to j
-                   for sum of-type #.*float-type* = #.(ensure-float 0)
-                   do (loop for k from 0 below i
-                            do (incf sum (* (lu i k) (lu k j))))
-                      (setf (lu i j) (- (lu i j) sum)))
-             (loop for i from (1+ j) below c
-                   for sum of-type #.*float-type* = #.(ensure-float 0)
+     (let* ((lu (mcopy m))
+            (n (mcols m))
+            (p (meye n))
+            (s 0)
+            (scale (make-array n :element-type 'float-type :initial-element #.(ensure-float 0))))
+       (declare (type mat-dim s))
+       (with-fast-matref (lu LU n)
+         ;; Discover the largest element and save the scaling.
+         (loop for i from 0 below n
+               for big = #.(ensure-float 0)
+               do (loop for j from 0 below n
+                        for temp = (abs (lu i j))
+                        do (if (< big temp) (setf big temp)))
+                  (when (= 0 big)
+                    (error "The matrix is singular in ~a:~%~a" i
+                           (write-matrix lu NIL)))
+                  (setf (aref scale i) big))
+         ;; Time to Crout it up.
+         (dotimes (j n (values lu p s))
+           ;; Part A sans diag
+           (loop for i from 0 below j
+                 for sum of-type #.*float-type* = (lu i j)
+                 do (loop for k from 0 below i
+                          do (decf sum (* (lu i k) (lu k j))))
+                    (setf (lu i j) sum))
+           (let ((imax j))
+             ;; Diag + pivot search
+             (loop with big = #.(ensure-float 0)
+                   for i from j below n
+                   for sum of-type #.*float-type* = (lu i j)
                    do (loop for k from 0 below j
-                            do (incf sum (* (lu i k) (lu k j))))
-                      (setf (lu i j) (/ (- (lu i j) sum) (lu j j))))))
-         (values LU P s))))))
+                            do (decf sum (* (lu i k) (lu k j))))
+                      (setf (lu i j) sum)
+                      (when pivot
+                        (let ((temp (* (abs sum) (aref scale i))))
+                          (when (<= big temp)
+                            (setf big temp)
+                            (setf imax i)))))
+             ;; Pivot swap
+             (unless (= j imax)
+               (incf s)
+               (nmswap-row lu imax j)
+               (nmswap-row p  imax j)
+               (setf (aref scale imax) (aref scale j)))
+             ;; Division
+             (when (< j (1- n))
+               (let ((div (/ (lu j j))))
+                 (loop for i from (1+ j) below n
+                       do (setf (lu i j) (* (lu i j) div))))))))))))
 
 (declaim (ftype (function (vec3) mat4) mtranslation))
 (define-ofun mtranslation (v)
