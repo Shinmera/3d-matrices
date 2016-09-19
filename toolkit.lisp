@@ -20,6 +20,11 @@
   (defvar *matrix-limit* (min (floor (sqrt array-dimension-limit))
                               (floor (sqrt most-positive-fixnum)))))
 
+(defvar *eps* (ecase *float-type*
+                (single-float 0.00001)
+                (double-float 0.00000000001)))
+(declaim (type #.*float-type* *eps*))
+
 (deftype mat-dim ()
   '(integer 0 #.(1- *matrix-limit*)))
 
@@ -50,3 +55,8 @@
   (etypecase functionish
     (function functionish)
     (symbol (fdefinition functionish))))
+
+(declaim (ftype (function (float-type float-type) boolean) ~=))
+(declaim (inline ~=))
+(defun ~= (a b)
+  (< (abs (- a b)) *eps*))

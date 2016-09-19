@@ -189,6 +189,7 @@
                               collect `(,',2mat-name ,prev ,next))))))))))
 
 (define-matcomp m= =)
+(define-matcomp m~= ~=)
 (define-matcomp m/= /= or)
 (define-matcomp m< <)
 (define-matcomp m> >)
