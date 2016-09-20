@@ -846,7 +846,7 @@
                        (g     i      i)  #.(ensure-float 1)))))))
 
 (declaim (ftype (function (mat &optional (integer 0)) list) meigen))
-(defun meigen (m &optional (iterations 20))
+(defun meigen (m &optional (iterations 50))
   (multiple-value-bind (Q R) (mqr m)
     (loop repeat iterations
           do (multiple-value-bind (Qn Rn)
