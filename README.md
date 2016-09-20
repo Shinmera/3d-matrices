@@ -46,7 +46,7 @@ If you're coming to this library with the intention of using it to do 3D math, y
       (nmrotate mat 3d-vectors:+vx+ 90)
       (m* mat (vec 1 2 3)))
 
-Aside from the basic comparison operators `m=` `m~=` `m/=` `m<` `m>` `m<=` `m>=`, and arithmetic operators `m+` `m-` `m*` `m/` `nm+` `nm-` `nm*` `n*m` `nm/`, 3d-matrices also includes LU decomposition `mlu`, determinant computation `mdet`, inversion `minv`, transposition `mtranspose`, trace calculation `mtrace`, cofactors `mcof` `mcofactor`, matrix adjugate `madj`, pivoting `mpivot`, norming `m1norm` `minorm` `m2norm`, QR decomposition `mqr` and eigenvalue calculation `meigen`. These should all work "as you expect" and I will thus refrain from showing them off in detail here. Refer to your standard linear algebra textbook to get an understanding of what they do if you don't know already.
+Aside from the basic comparison operators `m=` `m~=` `m/=` `m<` `m>` `m<=` `m>=`, and arithmetic operators `m+` `m-` `m*` `m/` `nm+` `nm-` `nm*` `n*m` `nm/`, 3d-matrices also includes LU decomposition `mlu`, determinant computation `mdet`, inversion `minv`, transposition `mtranspose`, trace calculation `mtrace`, minors `mminor`, cofactors `mcof` `mcofactor`, matrix adjugate `madj`, pivoting `mpivot`, norming `m1norm` `minorm` `m2norm`, QR decomposition `mqr` and eigenvalue calculation `meigen`. These should all work "as you expect" and I will thus refrain from showing them off in detail here. Refer to your standard linear algebra textbook to get an understanding of what they do if you don't know already.
 
 Finally, There's also some basic operators to do sectioning or restructuring of a matrix.
 
