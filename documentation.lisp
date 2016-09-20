@@ -323,7 +323,7 @@ Y2, X2 are the lower right corner, exclusive")
   (function mtop
     "Returns the topmost N rows as a new matrix.")
 
-  (function mbototm
+  (function mbottom
     "Returns the lowermost N rows as a new matrix.")
 
   (function mleft
@@ -360,7 +360,7 @@ ELEMENTS can be
   (function %mat2
     "Direct constructor for the 2x2 matrix struct.")
 
-  (function %marr2
+  (function marr2
     "Direct accessor to the backing array of the MAT2.")
 
   (function mat2-p
@@ -392,7 +392,7 @@ ELEMENTS can be
   (function %mat3
     "Direct constructor for the 3x3 matrix struct.")
 
-  (function %marr3
+  (function marr3
     "Direct accessor to the backing array of the MAT3o.")
 
   (function mat3-p
@@ -424,7 +424,7 @@ ELEMENTS can be
   (function %mat4
     "Direct constructor for the 4x4 matrix struct.")
 
-  (function %marr4
+  (function marr4
     "Direct accessor to the backing array of the MAT4.")
 
   (function mat4-p
@@ -456,7 +456,7 @@ ELEMENTS can be
   (function %matn
     "Direct constructor for the NxM matrix struct.")
 
-  (function %marrn
+  (function marrn
     "Direct accessor to the backing array of the MATN.")
 
   (function %cols
