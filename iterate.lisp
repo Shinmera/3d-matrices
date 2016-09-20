@@ -13,10 +13,10 @@
                (funcall function i (aref arr i)))))
       (declare (inline iter))
       (etypecase mat
-        (mat2 (iter (%marr2 mat) 2))
-        (mat3 (iter (%marr3 mat) 3))
-        (mat4 (iter (%marr4 mat) 4))
-        (matn (iter (%marrn mat) (min (%rows mat) (%cols mat))))))))
+        (mat2 (iter (marr2 mat) 2))
+        (mat3 (iter (marr3 mat) 3))
+        (mat4 (iter (marr4 mat) 4))
+        (matn (iter (marrn mat) (min (%rows mat) (%cols mat))))))))
 
 (define-ofun map-mat-index (function mat)
   (let ((function (ensure-function function)))
@@ -25,10 +25,10 @@
                (funcall function i (aref arr i)))))
       (declare (inline iter))
       (etypecase mat
-        (mat2 (iter (%marr2 mat) 4))
-        (mat3 (iter (%marr3 mat) 9))
-        (mat4 (iter (%marr4 mat) 16))
-        (matn (iter (%marrn mat) (* (%rows mat) (%cols mat))))))))
+        (mat2 (iter (marr2 mat) 4))
+        (mat3 (iter (marr3 mat) 9))
+        (mat4 (iter (marr4 mat) 16))
+        (matn (iter (marrn mat) (* (%rows mat) (%cols mat))))))))
 
 (defmacro do-mat-diag ((i el mat &optional result) &body body)
   (let ((arr (gensym "ARRAY"))
@@ -43,10 +43,10 @@
        (declare (inline ,iter))
        (let ((,m ,mat))
          (etypecase ,m
-           (mat2 (,iter (%marr2 ,m) 2))
-           (mat3 (,iter (%marr3 ,m) 3))
-           (mat4 (,iter (%marr4 ,m) 4))
-           (matn (,iter (%marrn ,m) (min (%rows ,m) (%cols ,m)))))))))
+           (mat2 (,iter (marr2 ,m) 2))
+           (mat3 (,iter (marr3 ,m) 3))
+           (mat4 (,iter (marr4 ,m) 4))
+           (matn (,iter (marrn ,m) (min (%rows ,m) (%cols ,m)))))))))
 
 (defmacro do-mat-index ((i el mat &optional result) &body body)
   (let ((arr (gensym "ARRAY"))
@@ -61,7 +61,7 @@
        (declare (inline ,iter))
        (let ((,m ,mat))
          (etypecase ,m
-           (mat2 (,iter (%marr2 ,m) 4))
-           (mat3 (,iter (%marr3 ,m) 9))
-           (mat4 (,iter (%marr4 ,m) 16))
-           (matn (,iter (%marrn ,m) (* (%rows ,m) (%cols ,m)))))))))
+           (mat2 (,iter (marr2 ,m) 4))
+           (mat3 (,iter (marr3 ,m) 9))
+           (mat4 (,iter (marr4 ,m) 16))
+           (matn (,iter (marrn ,m) (* (%rows ,m) (%cols ,m)))))))))

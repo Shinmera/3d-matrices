@@ -29,7 +29,7 @@
   (let ((w (gensym "WIDTH")) (arr (gensym "ARRAY"))
         (x (gensym "X")) (y (gensym "Y")))
     `(let ((,w ,width)
-           (,arr (,(case width (2 '%marr2) (3 '%marr3) (4 '%marr4) (T 'marr)) ,mat)))
+           (,arr (,(case width (2 'marr2) (3 'marr3) (4 'marr4) (T 'marr)) ,mat)))
        (declare (ignorable ,w))
        (macrolet ((,accessor (,y &optional ,x)
                     `(the ,*float-type*
@@ -297,8 +297,8 @@
            (matn (etypecase ,b
                    (,*float-type*
                     (let ((,m (matn (%rows ,a) (%cols ,a))))
-                      (map-into (%marrn ,m) (lambda (,m) (* (the ,*float-type* ,m)
-                                                            (the ,*float-type* ,b))) (%marrn ,a))
+                      (map-into (marrn ,m) (lambda (,m) (* (the ,*float-type* ,m)
+                                                            (the ,*float-type* ,b))) (marrn ,a))
                       ,m))
                    (matn
                     (assert (and (= (%rows ,a) (%cols ,b))
@@ -346,8 +346,8 @@
                    (mat4 (with-fast-matref (f ,b 4) (matf ,u ,@(unrollm 4))))))
            (matn (etypecase ,b
                    (,*float-type*
-                    (map-into (%marrn ,a) (lambda (,m) (* (the ,*float-type* ,m)
-                                                          (the ,*float-type* ,b))) (%marrn ,a)))
+                    (map-into (marrn ,a) (lambda (,m) (* (the ,*float-type* ,m)
+                                                          (the ,*float-type* ,b))) (marrn ,a)))
                    (matn
                     (assert (= (%rows ,a) (%cols ,a) (%cols ,b) (%rows ,b)))
                     (let ((,m (make-array (%cols ,a) :initial-element ,(ensure-float 0) :element-type ',*float-type*))
@@ -388,7 +388,7 @@
          (mat3 (etypecase ,b (,*float-type* (,@mc ,@(unroll 9)))))
          (mat4 (etypecase ,b (,*float-type* (,@mc ,@(unroll 16)))))
          (matn (etypecase ,b (,*float-type* (let ((,m ,mn))
-                                              (map-into (%marrn ,m) (lambda (,m) (* (the ,*float-type* ,m) ,b)) (%marrn ,a))
+                                              (map-into (marrn ,m) (lambda (,m) (* (the ,*float-type* ,m) ,b)) (marrn ,a))
                                               ,mn))))))))
 
 (declaim (ftype (function ((or mat real) &rest (or mat real)) mat) m/ nm/))
@@ -400,21 +400,21 @@
 (declaim (ftype (function (mat (or symbol function)) mat) mapply))
 (define-ofun mapply (mat op)
   (etypecase mat
-    (mat2 (let ((m (mat2))) (map-into (%marr2 m) op (%marr2 mat)) m))
-    (mat3 (let ((m (mat3))) (map-into (%marr3 m) op (%marr3 mat)) m))
-    (mat4 (let ((m (mat4))) (map-into (%marr4 m) op (%marr4 mat)) m))
+    (mat2 (let ((m (mat2))) (map-into (marr2 m) op (marr2 mat)) m))
+    (mat3 (let ((m (mat3))) (map-into (marr3 m) op (marr3 mat)) m))
+    (mat4 (let ((m (mat4))) (map-into (marr4 m) op (marr4 mat)) m))
     (matn (let ((m (matn (%rows mat) (%cols mat))))
-            (map-into (%marrn m) op (%marrn mat))
+            (map-into (marrn m) op (marrn mat))
             m))))
 
 (declaim (inline mapplyf))
 (declaim (ftype (function (mat (or symbol function)) mat) mapplyf))
 (define-ofun mapplyf (mat op)
   (etypecase mat
-    (mat2 (map-into (%marr2 mat) op (%marr2 mat)) mat)
-    (mat3 (map-into (%marr3 mat) op (%marr3 mat)) mat)
-    (mat4 (map-into (%marr4 mat) op (%marr4 mat)) mat)
-    (matn (map-into (%marrn mat) op (%marrn mat)) mat)))
+    (mat2 (map-into (marr2 mat) op (marr2 mat)) mat)
+    (mat3 (map-into (marr3 mat) op (marr3 mat)) mat)
+    (mat4 (map-into (marr4 mat) op (marr4 mat)) mat)
+    (matn (map-into (marrn mat) op (marrn mat)) mat)))
 
 ;; Lots of juicy inlined crap.
 (declaim (ftype (function (mat) float-type) mdet))

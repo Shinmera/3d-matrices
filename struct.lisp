@@ -46,26 +46,26 @@
      (write-matrix a stream)))
 
 (defstruct (mat2 (:conc-name NIL)
-                   (:constructor %mat2 (%marr2))
+                   (:constructor %mat2 (marr2))
                    (:copier NIL)
                    (:predicate mat2-p))
-  (%marr2 NIL :type (simple-array float-type (4))))
+  (marr2 NIL :type (simple-array float-type (4))))
 
 (declaim (inline miref2))
 (declaim (ftype (function (mat2 (integer 0 3)) float-type) miref2))
 (define-ofun miref2 (mat i)
-  (aref (%marr2 mat) i))
+  (aref (marr2 mat) i))
 
 (defsetf miref2 (&environment env mat i) (value)
-  `(setf (aref (%marr2 ,mat) ,i) ,(ensure-float-param value env)))
+  `(setf (aref (marr2 ,mat) ,i) ,(ensure-float-param value env)))
 
 (declaim (inline mcref2))
 (declaim (ftype (function (mat2 (integer 0 1) (integer 0 1)) float-type) mcref2))
 (define-ofun mcref2 (mat y x)
-  (aref (%marr2 mat) (+ (* y 2) x)))
+  (aref (marr2 mat) (+ (* y 2) x)))
 
 (defsetf mcref2 (&environment env mat y x) (value)
-  `(setf (aref (%marr2 ,mat) (+ (* ,y 2) ,x)) ,(ensure-float-param value env)))
+  `(setf (aref (marr2 ,mat) (+ (* ,y 2) ,x)) ,(ensure-float-param value env)))
 
 (define-ofun mat2 (&optional elements)
   (%mat2 (%proper-array 4 elements)))
@@ -78,38 +78,38 @@
 (declaim (inline mcopy2))
 (declaim (ftype (function (mat2) mat2) mcopy2))
 (defun mcopy2 (m2)
-  (%mat2 (copy-seq (%marr2 m2))))
+  (%mat2 (copy-seq (marr2 m2))))
 
 (defmethod print-object ((m mat2) stream)
   (write (make-load-form m) :stream stream))
 
 (defmethod make-load-form ((m mat2) &optional env)
   (declare (ignore env))
-  `(mat2 ,(%marr2 m)))
+  `(mat2 ,(marr2 m)))
 
 (define-describe-matrix mat2)
 
 (defstruct (mat3 (:conc-name NIL)
-                   (:constructor %mat3 (%marr3))
+                   (:constructor %mat3 (marr3))
                    (:copier NIL)
                    (:predicate mat3-p))
-  (%marr3 NIL :type (simple-array float-type (9))))
+  (marr3 NIL :type (simple-array float-type (9))))
 
 (declaim (inline miref3))
 (declaim (ftype (function (mat3 (integer 0 8)) float-type) miref3))
 (define-ofun miref3 (mat i)
-  (aref (%marr3 mat) i))
+  (aref (marr3 mat) i))
 
 (defsetf miref3 (&environment env mat i) (value)
-  `(setf (aref (%marr3 ,mat) ,i) ,(ensure-float-param value env)))
+  `(setf (aref (marr3 ,mat) ,i) ,(ensure-float-param value env)))
 
 (declaim (inline mcref3))
 (declaim (ftype (function (mat3 (integer 0 2) (integer 0 2)) float-type) mcref3))
 (define-ofun mcref3 (mat y x)
-  (aref (%marr3 mat) (+ (* y 3) x)))
+  (aref (marr3 mat) (+ (* y 3) x)))
 
 (defsetf mcref3 (&environment env mat y x) (value)
-  `(setf (aref (%marr3 ,mat) (+ (* ,y 3) ,x)) ,(ensure-float-param value env)))
+  `(setf (aref (marr3 ,mat) (+ (* ,y 3) ,x)) ,(ensure-float-param value env)))
 
 (define-ofun mat3 (&optional elements)
   (%mat3 (%proper-array 9 elements)))
@@ -122,38 +122,38 @@
 (declaim (inline mcopy3))
 (declaim (ftype (function (mat3) mat3) mcopy3))
 (defun mcopy3 (m3)
-  (%mat3 (copy-seq (%marr3 m3))))
+  (%mat3 (copy-seq (marr3 m3))))
 
 (defmethod print-object ((m mat3) stream)
   (write (make-load-form m) :stream stream))
 
 (defmethod make-load-form ((m mat3) &optional env)
   (declare (ignore env))
-  `(mat3 ,(%marr3 m)))
+  `(mat3 ,(marr3 m)))
 
 (define-describe-matrix mat3)
 
 (defstruct (mat4 (:conc-name NIL)
-                   (:constructor %mat4 (%marr4))
+                   (:constructor %mat4 (marr4))
                    (:copier NIL)
                    (:predicate mat4-p))
-  (%marr4 NIL :type (simple-array float-type (16))))
+  (marr4 NIL :type (simple-array float-type (16))))
 
 (declaim (inline miref4))
 (declaim (ftype (function (mat4 (integer 0 15)) float-type) miref4))
 (define-ofun miref4 (mat i)
-  (aref (%marr4 mat) i))
+  (aref (marr4 mat) i))
 
 (defsetf miref4 (&environment env mat i) (value)
-  `(setf (aref (%marr4 ,mat) ,i) ,(ensure-float-param value env)))
+  `(setf (aref (marr4 ,mat) ,i) ,(ensure-float-param value env)))
 
 (declaim (inline mcref4))
 (declaim (ftype (function (mat4 (integer 0 3) (integer 0 3)) float-type) mcref4))
 (define-ofun mcref4 (mat y x)
-  (aref (%marr4 mat) (+ (* y 4) x)))
+  (aref (marr4 mat) (+ (* y 4) x)))
 
 (defsetf mcref4 (&environment env mat y x) (value)
-  `(setf (aref (%marr4 ,mat) (+ (* ,y 4) ,x)) ,(ensure-float-param value env)))
+  `(setf (aref (marr4 ,mat) (+ (* ,y 4) ,x)) ,(ensure-float-param value env)))
 
 (define-ofun mat4 (&optional elements)
   (%mat4 (%proper-array 16 elements)))
@@ -166,40 +166,40 @@
 (declaim (inline mcopy4))
 (declaim (ftype (function (mat4) mat4) mcopy4))
 (defun mcopy4 (m4)
-  (%mat4 (copy-seq (%marr4 m4))))
+  (%mat4 (copy-seq (marr4 m4))))
 
 (defmethod print-object ((m mat4) stream)
   (write (make-load-form m) :stream stream))
 
 (defmethod make-load-form ((m mat4) &optional env)
   (declare (ignore env))
-  `(mat4 ,(%marr4 m)))
+  `(mat4 ,(marr4 m)))
 
 (define-describe-matrix mat4)
 
 (defstruct (matn (:conc-name NIL)
-                 (:constructor %matn (%rows %cols %marrn))
+                 (:constructor %matn (%rows %cols marrn))
                  (:copier NIL)
                  (:predicate matn-p))
   (%rows NIL :type mat-dim)
   (%cols NIL :type mat-dim)
-  (%marrn NIL :type (simple-array float-type)))
+  (marrn NIL :type (simple-array float-type)))
 
 (declaim (inline mirefn))
 (declaim (ftype (function (matn (integer 0 #.(expt *matrix-limit* 2))) float-type) mirefn))
 (define-ofun mirefn (mat i)
-  (aref (%marrn mat) i))
+  (aref (marrn mat) i))
 
 (defsetf mirefn (&environment env mat i) (value)
-  `(setf (aref (%marrn ,mat) ,i) ,(ensure-float-param value env)))
+  `(setf (aref (marrn ,mat) ,i) ,(ensure-float-param value env)))
 
 (declaim (inline mcrefn))
 (declaim (ftype (function (matn mat-dim mat-dim) float-type) mcrefn))
 (define-ofun mcrefn (mat y x)
-  (aref (%marrn mat) (+ (* y (%cols mat)) x)))
+  (aref (marrn mat) (+ (* y (%cols mat)) x)))
 
 (defsetf mcrefn (&environment env mat y x) (value)
-  `(setf (aref (%marrn ,mat) (+ (* ,y (%cols ,mat)) ,x)) ,(ensure-float-param value env)))
+  `(setf (aref (marrn ,mat) (+ (* ,y (%cols ,mat)) ,x)) ,(ensure-float-param value env)))
 
 (define-ofun matn (r c &optional elements)
   (check-type r mat-dim)
@@ -230,14 +230,14 @@
 (declaim (inline mcopyn))
 (declaim (ftype (function (matn) matn) mcopyn))
 (defun mcopyn (mn)
-  (%matn (%rows mn) (%cols mn) (copy-seq (%marrn mn))))
+  (%matn (%rows mn) (%cols mn) (copy-seq (marrn mn))))
 
 (defmethod print-object ((m matn) stream)
   (write (make-load-form m) :stream stream))
 
 (defmethod make-load-form ((m matn) &optional env)
   (declare (ignore env))
-  `(matn ,(%rows m) ,(%cols m) ,(%marrn m)))
+  `(matn ,(%rows m) ,(%cols m) ,(marrn m)))
 
 (define-describe-matrix matn)
 
@@ -254,10 +254,10 @@
 (declaim (ftype (function (mat) (simple-array float-type)) marr))
 (defun marr (mat)
   (etypecase mat
-    (mat2 (%marr2 mat))
-    (mat3 (%marr3 mat))
-    (mat4 (%marr4 mat))
-    (matn (%marrn mat))))
+    (mat2 (marr2 mat))
+    (mat3 (marr3 mat))
+    (mat4 (marr4 mat))
+    (matn (marrn mat))))
 
 (declaim (inline miref))
 (declaim (ftype (function (mat (integer 0 #.(expt *matrix-limit* 2))) float-type) miref))
@@ -315,17 +315,17 @@
       (4 `(let ((,m (mat2)))
             (psetf
              ,@(loop for i from 0 below 4 for v in vals
-                     append `((aref (%marr2 ,m) ,i) ,(ensure-float-param v env))))
+                     append `((aref (marr2 ,m) ,i) ,(ensure-float-param v env))))
             ,m))
       (9 `(let ((,m (mat3)))
             (psetf
              ,@(loop for i from 0 below 9 for v in vals
-                     append `((aref (%marr3 ,m) ,i) ,(ensure-float-param v env))))
+                     append `((aref (marr3 ,m) ,i) ,(ensure-float-param v env))))
             ,m))
       (16 `(let ((,m (mat4)))
              (psetf
               ,@(loop for i from 0 below 16 for v in vals
-                      append `((aref (%marr4 ,m) ,i) ,(ensure-float-param v env))))
+                      append `((aref (marr4 ,m) ,i) ,(ensure-float-param v env))))
              ,m))
       (T whole))))
 
@@ -340,17 +340,17 @@
       (4 `(let ((,m ,mat))
             (psetf
              ,@(loop for i from 0 below 4 for v in vals
-                     append `((aref (%marr2 ,m) ,i) ,(ensure-float-param v env))))
+                     append `((aref (marr2 ,m) ,i) ,(ensure-float-param v env))))
             ,m))
       (9 `(let ((,m ,mat))
             (psetf
              ,@(loop for i from 0 below 9 for v in vals
-                     append `((aref (%marr3 ,m) ,i) ,(ensure-float-param v env))))
+                     append `((aref (marr3 ,m) ,i) ,(ensure-float-param v env))))
             ,m))
       (16 `(let ((,m ,mat))
              (psetf
               ,@(loop for i from 0 below 16 for v in vals
-                      append `((aref (%marr4 ,m) ,i) ,(ensure-float-param v env))))
+                      append `((aref (marr4 ,m) ,i) ,(ensure-float-param v env))))
              ,m))
       (T whole))))
 

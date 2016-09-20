@@ -68,21 +68,25 @@
   (:export
    #:mat2
    #:mat2-p
+   #:marr2
    #:miref2
    #:mcref2
    #:mcopy2
    #:mat3
    #:mat3-p
+   #:marr3
    #:miref3
    #:mcref3
    #:mcopy3
    #:mat4
    #:mat4-p
+   #:marr4
    #:miref4
    #:mcref4
    #:mcopy4
    #:matn
    #:matn-p
+   #:marrn
    #:mirefn
    #:mcrefn
    #:mcopyn
