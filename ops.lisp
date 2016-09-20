@@ -171,6 +171,10 @@
                     (%2mat-op a b ,op ,comb ,comb ,comb
                               (with-fast-matrefs ((e a (%cols a))
                                                   (f b (%cols b)))
+                                (unless (and (= (%cols a) (%cols b))
+                                             (= (%rows a) (%rows b)))
+                                  (error "Matrices are of incompatible size:~%~a~%~a"
+                                         (write-matrix a NIL) (write-matrix b NIL)))
                                 (loop for i from 0 below (* (%cols a) (%rows a))
                                       ,(ecase comb (and 'always) (or 'thereis)) (,op (e i) (f i))))
                               (with-fast-matref (e a (%cols a))
@@ -210,6 +214,10 @@
                   `(,body a b)
                   `(%2mat-op a b ,op mat mat mat
                              (let ((mat (matn (%rows a) (%cols a))))
+                               (unless (and (= (%cols a) (%cols b))
+                                            (= (%rows a) (%rows b)))
+                                 (error "Matrices are of incompatible size:~%~a~%~a"
+                                        (write-matrix a NIL) (write-matrix b NIL)))
                                (with-fast-matrefs ((e a (%cols a))
                                                    (f b (%cols b))
                                                    (g mat (%cols a)))
@@ -244,6 +252,10 @@
                 `(%2mat-op a b ,op (matf a) (matf a) (matf a)
                            (with-fast-matrefs ((e a (%cols a))
                                                (f b (%cols b)))
+                             (unless (and (= (%cols a) (%cols b))
+                                          (= (%rows a) (%rows b)))
+                               (error "Matrices are of incompatible size:~%~a~%~a"
+                                      (write-matrix a NIL) (write-matrix b NIL)))
                              (dotimes (i (* (%cols a) (%rows a)) a)
                                (setf (e i) (,op (e i) (f i)))))
                            (with-fast-matref (e a (%cols a))
@@ -301,8 +313,10 @@
                                                             (the ,*float-type* ,b))) (marrn ,a))
                       ,m))
                    (matn
-                    (assert (and (= (%rows ,a) (%cols ,b))
-                                 (= (%cols ,a) (%rows ,b))))
+                    (unless (and (= (%rows ,a) (%cols ,b))
+                                 (= (%cols ,a) (%rows ,b)))
+                      (error "Matrices are of incompatible size:~%~a~%~a"
+                             (write-matrix a NIL) (write-matrix b NIL)))
                     (let ((,m (matn (%rows ,a) (%cols ,b))))
                       (with-fast-matrefs ((e ,a (%cols ,a))
                                           (f ,b (%cols ,b))
@@ -349,7 +363,9 @@
                     (map-into (marrn ,a) (lambda (,m) (* (the ,*float-type* ,m)
                                                           (the ,*float-type* ,b))) (marrn ,a)))
                    (matn
-                    (assert (= (%rows ,a) (%cols ,a) (%cols ,b) (%rows ,b)))
+                    (unless (= (%cols a) (%cols b) (%rows a) (%rows b))
+                      (error "Matrices are of incompatible size (only square matrices can be multiplied in place!):~%~a~%~a"
+                             (write-matrix a NIL) (write-matrix b NIL)))
                     (let ((,m (make-array (%cols ,a) :initial-element ,(ensure-float 0) :element-type ',*float-type*))
                           (s (%rows ,a)))
                       (with-fast-matrefs ((e ,a s)
