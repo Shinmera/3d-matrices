@@ -40,7 +40,7 @@
    #:minv
    #:mtranspose
    #:mtrace
-   #:mcoefficient
+   #:mcofactor
    #:mcof
    #:madj
    #:mpivot
