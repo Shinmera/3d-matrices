@@ -546,9 +546,29 @@
             (do-mat-diag (i el m sum)
               (setf sum (+ el (the float-type sum))))))))
 
+(declaim (ftype (function (mat mat-dim mat-dim) float-type) mminor))
+(define-ofun mminor (m y x)
+  (let* ((c (mcols m))
+         (r (mrows m))
+         (s (matn (1- r) (1- c))))
+    (with-fast-matrefs ((s s (1- c))
+                        (m m c))
+      ;; Copy the four subregions
+      (loop for i from 0 below y
+            do (loop for j from 0 below x
+                     do (setf (s i j) (m i j)))
+               (loop for j from (1+ x) below c
+                     do (setf (s i (1- j)) (m i j))))
+      (loop for i from (1+ y) below r
+            do (loop for j from 0 below x
+                     do (setf (s (1- i) j) (m i j)))
+               (loop for j from (1+ x) below c
+                     do (setf (s (1- i) (1- j)) (m i j))))
+      (mdet s))))
+
 (declaim (ftype (function (mat mat-dim mat-dim) float-type) mcoefficient))
-(defun mcofactor (m y x)
-  )
+(define-ofun mcofactor (m y x)
+  (* (mcref m y x) (mminor m y x)))
 
 (declaim (ftype (function (mat) mat) mcof))
 (define-ofun mcof (m)

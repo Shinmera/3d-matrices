@@ -231,8 +231,18 @@ For MAT2 MAT3 MAT4, inlined variants exist. For MATN, a generic swap is used.")
 
 For MAT2 MAT3 MAT4, inlined variants exist. For MATN, a generic sum is used.")
 
+  (function mminor
+    "Computes the minor at the specified index of the matrix.
+
+This basically calculates the determinant of the matrix with the row and
+column of the specified index excluded.")
+
   (function mcofactor
-    "Computes the cofactor at the specified index of the matrix.")
+    "Computes the cofactor at the specified index of the matrix.
+
+This is just the element at the position multiplied by the minor.
+
+See MMINOR")
 
   (function mcof
     "Computes the cofactor matrix.

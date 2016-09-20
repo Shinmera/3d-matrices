@@ -40,6 +40,7 @@
    #:minv
    #:mtranspose
    #:mtrace
+   #:mminor
    #:mcofactor
    #:mcof
    #:madj
