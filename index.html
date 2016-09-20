@@ -1,0 +1,1495 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8"/>
+    <title>3D-MATRICES</title>
+    <style type="text/css">
+      html{font-family: serif;}
+      code a{text-decoration: none;}
+      h1{display: inline-block; margin-bottom: 0;}
+      code{font-family: monospace;}
+      h4{display: inline-block; margin: 0; padding: 0;}
+      #symbol-index ul{list-style: none;}
+      .package li{margin-bottom: 20px;}
+      .package pre{margin: 0 0 0 10px; white-space: pre-wrap;}
+      .package .nicknames{font-weight: normal;}
+      table{margin: 20px;}
+      td{padding-bottom: 10px;}
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>3d-matrices</h1>
+      <span class="version">1.0.0</span>
+      <p class="description">A utility library implementing 2x2, 3x3, 4x4, and NxN matrix functionality.</p>
+    </header>
+    <div id="content">
+      <article>
+        
+          <span><h2>About 3d-matrices</h2>
+
+<p>This is a library implementing common matrix operations, mainly intended as the counterpiece to <a href="https://shinmera.github.io/3d-vectors">3d-vectors</a> and thus being aimed at operations in 3D space. Still, it also implements other common matrix tasks such as LU and QR factorisation, determinant computation, and sub-matrix selection. 2x2, 3x3, and 4x4 matrices are specially treated and often have specifically optimised or inlined variants in the operations to ensure as high a speed as possible. NxM matrices are also available, but will always use a general algorithm in the operations.</p>
+
+<p>This library by no means attempts, nor comes in any way close to replacing or imitating things such as BLAS and LIN/LAPACK. The main purpose is to have a library that allows convenient matrix operations in conjunction with the 3d-vectors library. It should be sufficiently fast and accurate for most purposes, but should not be used for serious matrix based calculations. Please use industry-standard packages for that.</p>
+
+<h2>How To</h2>
+
+<p>Load it through ASDF or Quicklisp and use the package.</p>
+
+<pre><code>(ql:quickload :3d-matrices)
+(<a href="http://l1sp.org/cl/use-package">use-package</a> :3d-matrices)
+</code></pre>
+
+<p>All the functions are prefixed with an <code>m</code> or with <code>nm</code> for destructive ops. This should ensure that there are no clashes in names. Now let's look at creating matrices.</p>
+
+<pre><code>(<a href="#3D-MATRICES:MAT">mat</a> 1 2 3 4)
+(<a href="#3D-MATRICES:MAT2">mat2</a> 1)
+(<a href="#3D-MATRICES:MAT2">mat2</a> '(1 2 3 4))
+(<a href="#3D-MATRICES:MCOPY">mcopy</a> (<a href="#3D-MATRICES:MAT3">mat3</a>))
+(<a href="#3D-MATRICES:MATN">matn</a> 2 3)
+(<a href="#3D-MATRICES:MEYE">meye</a> 5)
+(<a href="#3D-MATRICES:MUNIFORM">muniform</a> 2 3 1)
+(<a href="#3D-MATRICES:MRAND">mrand</a> 10 10)
+</code></pre>
+
+<p>In order to see the matrix in a more human-readable format, you can use <code><a href="http://l1sp.org/cl/describe">describe</a></code> or <code><a href="#3D-MATRICES:WRITE-MATRIX">write-matrix</a></code> directly:</p>
+
+<pre><code>(<a href="http://l1sp.org/cl/describe">describe</a> (<a href="#3D-MATRICES:MEYE">meye</a> 5))
+(<a href="#3D-MATRICES:WRITE-MATRIX">write-matrix</a> (<a href="#3D-MATRICES:MAT2">mat2</a>) T)
+(<a href="#3D-MATRICES:WRITE-MATRIX">write-matrix</a> (<a href="#3D-MATRICES:MAT2">mat2</a>) T :format :wolfram)
+(<a href="#3D-MATRICES:WRITE-MATRIX">write-matrix</a> (<a href="#3D-MATRICES:MAT2">mat2</a>) T :format :array)
+</code></pre>
+
+<p>Matrices always use <code><a href="http://l1sp.org/cl/float">float</a></code>s. Where sensible, operations will accept <code><a href="http://l1sp.org/cl/real">real</a></code>s as well however. Either <code><a href="http://l1sp.org/cl/single-float">single-float</a></code>s or <code><a href="http://l1sp.org/cl/double-float">double-float</a></code>s are used, depending on the presence of the <code>:3d-vectors-double-floats</code> keyword in <code><a href="http://l1sp.org/cl/*features*">*features*</a></code>. This feature is taken over from the 3d-vectors library to ensure that both of them always agree on the float type.</p>
+
+<p>The type <code><a href="#3D-MATRICES:MAT">mat</a></code> includes all subtypes <code><a href="#3D-MATRICES:MAT2">mat2</a></code>, <code><a href="#3D-MATRICES:MAT3">mat3</a></code>, <code><a href="#3D-MATRICES:MAT4">mat4</a></code>, and <code><a href="#3D-MATRICES:MATN">matn</a></code>. Each of them have their own specific accessors that are suffixed with the dimension number. Usually you should be fine with using the generic variants, but if you already know the type you should probably fall back to using the specific one, or use <code><a href="#3D-MATRICES:WITH-FAST-MATREF">with-fast-matref</a></code>.</p>
+
+<pre><code>(<a href="#3D-MATRICES:MIREF">miref</a> (<a href="#3D-MATRICES:MEYE">meye</a> 2) 3)
+(<a href="#3D-MATRICES:MCREF">mcref</a> (<a href="#3D-MATRICES:MEYE">meye</a> 2) 1 1)
+(<a href="#3D-MATRICES:WITH-FAST-MATREF">with-fast-matref</a> (e (<a href="#3D-MATRICES:MAT">mat</a> 2) 2)
+  (e 1 1))
+</code></pre>
+
+<p>Matrices are basically a struct that contains a simple-vector of floats. This means that every single reference must also dereference the array first. This is why, if you have many repeated accesses to an array, you should use <code><a href="#3D-MATRICES:WITH-FAST-MATREF">with-fast-matref</a></code> or do the same manually by first retrieving the backing array with <code><a href="#3D-MATRICES:MARR">marr</a></code>.</p>
+
+<p>If you're coming to this library with the intention of using it to do 3D math, you'll most likely be mostly looking for how to create translation, rotation, and scaling matrices. Specific functions exist for this that take care of it for you. They all operate on <code><a href="#3D-MATRICES:MAT4">mat4</a></code>s and take a <code>vec3</code> as argument.</p>
+
+<pre><code>(<a href="http://l1sp.org/cl/let">let</a> ((mat (<a href="#3D-MATRICES:MAT4">mat4</a> 1)))
+  (<a href="#3D-MATRICES:NMTRANSLATE">nmtranslate</a> mat (3d-vectors:vec 1 2 3))
+  (<a href="#3D-MATRICES:NMSCALE">nmscale</a> mat (3d-vectors:vec 1 2 3))
+  (<a href="#3D-MATRICES:NMROTATE">nmrotate</a> mat 3d-vectors:+vx+ 90)
+  (<a href="#3D-MATRICES:M*">m*</a> mat (vec 1 2 3)))
+</code></pre>
+
+<p>Aside from the basic comparison operators <code><a href="#3D-MATRICES:M=">m=</a></code> <code><a href="#3D-MATRICES:M~=">m~=</a></code> <code><a href="#3D-MATRICES:M/=">m/=</a></code> <code>m&lt;</code> <code>m&gt;</code> <code>m&lt;=</code> <code>m&gt;=</code>, and arithmetic operators <code><a href="#3D-MATRICES:M+">m+</a></code> <code><a href="#3D-MATRICES:M-">m-</a></code> <code><a href="#3D-MATRICES:M*">m*</a></code> <code><a href="#3D-MATRICES:M/">m/</a></code> <code><a href="#3D-MATRICES:NM+">nm+</a></code> <code><a href="#3D-MATRICES:NM-">nm-</a></code> <code><a href="#3D-MATRICES:NM*">nm*</a></code> <code><a href="#3D-MATRICES:N*M">n*m</a></code> <code><a href="#3D-MATRICES:NM/">nm/</a></code>, 3d-matrices also includes LU decomposition <code><a href="#3D-MATRICES:MLU">mlu</a></code>, determinant computation <code><a href="#3D-MATRICES:MDET">mdet</a></code>, inversion <code><a href="#3D-MATRICES:MINV">minv</a></code>, transposition <code><a href="#3D-MATRICES:MTRANSPOSE">mtranspose</a></code>, trace calculation <code><a href="#3D-MATRICES:MTRACE">mtrace</a></code>, cofactors <code><a href="#3D-MATRICES:MCOF">mcof</a></code> <code><a href="#3D-MATRICES:MCOFACTOR">mcofactor</a></code>, matrix adjugate <code><a href="#3D-MATRICES:MADJ">madj</a></code>, pivoting <code><a href="#3D-MATRICES:MPIVOT">mpivot</a></code>, norming <code><a href="#3D-MATRICES:M1NORM">m1norm</a></code> <code><a href="#3D-MATRICES:MINORM">minorm</a></code> <code><a href="#3D-MATRICES:M2NORM">m2norm</a></code>, QR decomposition <code><a href="#3D-MATRICES:MQR">mqr</a></code> and eigenvalue calculation <code><a href="#3D-MATRICES:MEIGEN">meigen</a></code>. These should all work &quot;as you expect&quot; and I will thus refrain from showing them off in detail here. Refer to your standard linear algebra textbook to get an understanding of what they do if you don't know already.</p>
+
+<p>Finally, There's also some basic operators to do sectioning or restructuring of a matrix.</p>
+
+<pre><code>(<a href="#3D-MATRICES:MCOL">mcol</a> (<a href="#3D-MATRICES:MAT">mat</a> 1 2 3 4) 0)
+(<a href="#3D-MATRICES:MROW">mrow</a> (<a href="#3D-MATRICES:MAT">mat</a> 1 2 3 4) 0)
+(<a href="#3D-MATRICES:MDIAG">mdiag</a> (<a href="#3D-MATRICES:MAT">mat</a> 1 0 0 0 2 0 0 0 3))
+(<a href="#3D-MATRICES:MTOP">mtop</a> (<a href="#3D-MATRICES:MAT">mat</a> 1 2 3 4 5 6 7 8 9) 2)
+(<a href="#3D-MATRICES:NMSWAP-ROW">nmswap-row</a> (<a href="#3D-MATRICES:MAT">mat</a> 1 2 3 4) 0 1)
+</code></pre>
+
+<p>And that's pretty much all she wrote. Note that some operations will only work on square or non-singular matrices, and all operations that take multiple operands require them to be of a compatible type. For example, you can only multiply matrices that are of agreeable rows and columns or multiply with a vector that is of the appropriate size.</p>
+
+<h2>Also See</h2>
+
+<ul>
+<li><a href="https://shinmera.github.io/3d-vectors">3d-vectors</a></li>
+</ul>
+</span>
+        
+      </article>
+      <article>
+        
+          <h2>Copyright</h2>
+          <span>3d-matrices</span> is licensed under the <span><a href="https://tldrlegal.com/search?q=Artistic">Artistic</a></span> license.
+          
+            © <span>Nicolas Hafner &lt;shinmera@tymoon.eu&gt;</span>
+            .
+          
+          This library can be obtained on <a href="https://github.com/Shinmera/3d-matrices">https://github.com/Shinmera/3d-matrices</a>.
+        
+      </article>
+      
+        <article id="symbol-index">
+          <h2>Package Index</h2>
+          <ul><li class="package">
+              <h3>
+                <a name="3D-MATRICES" href="#3D-MATRICES">3D-MATRICES</a>
+                <span class="nicknames">(ORG.SHIRAKUMO.FLARE.MATRIX)</span>
+              </h3>
+              <ul><li>
+                  <a name="3D-MATRICES:MAT2"/>
+                  <article>
+                    <header class="class">
+                      <span class="type">class</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MAT2" class="name">MAT2</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">()</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">The 2x2 matrix type.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:MAT3"/>
+                  <article>
+                    <header class="class">
+                      <span class="type">class</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MAT3" class="name">MAT3</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">()</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">The 3x3 matrix type.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:MAT4"/>
+                  <article>
+                    <header class="class">
+                      <span class="type">class</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MAT4" class="name">MAT4</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">()</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">The 4x4 matrix type.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:MATN"/>
+                  <article>
+                    <header class="class">
+                      <span class="type">class</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MATN" class="name">MATN</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">()</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">The NxM matrix type.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:MARR2"/>
+                  <article>
+                    <header class="accessor">
+                      <span class="type">accessor</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MARR2" class="name">MARR2</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(INSTANCE)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Direct accessor to the backing array of the MAT2.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:MARR3"/>
+                  <article>
+                    <header class="accessor">
+                      <span class="type">accessor</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MARR3" class="name">MARR3</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(INSTANCE)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Direct accessor to the backing array of the MAT3o.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:MARR4"/>
+                  <article>
+                    <header class="accessor">
+                      <span class="type">accessor</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MARR4" class="name">MARR4</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(INSTANCE)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Direct accessor to the backing array of the MAT4.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:MARRN"/>
+                  <article>
+                    <header class="accessor">
+                      <span class="type">accessor</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MARRN" class="name">MARRN</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(INSTANCE)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Direct accessor to the backing array of the MATN.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:MCOL"/>
+                  <article>
+                    <header class="accessor">
+                      <span class="type">accessor</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MCOL" class="name">MCOL</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(MAT N)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Accesses the requested column as a vector of the appropriate size.
+
+This only works for MAT2, MAT3, MAT4.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:MROW"/>
+                  <article>
+                    <header class="accessor">
+                      <span class="type">accessor</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MROW" class="name">MROW</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(MAT N)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Accesses the requested row as a vector of the appropriate size.
+
+This only works for MAT2, MAT3, MAT4.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:M*"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:M*" class="name">M*</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(VAL &amp;REST VALS)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Computes a matrix multiplication.
+
+If the other operand is a real, the matrix is multiplied with the real element-wise.
+If the other operand is a matrix, they are multiplied as per matrix multiplication.
+Note that the returned matrix may have different size than the input matrices as a result
+of this. The two matrices must agree on the size as per matrix multiplication.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:M+"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:M+" class="name">M+</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(VAL &amp;REST VALS)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Computes the element-wise addition of the matrices or reals. Returns a fresh matrix.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:M-"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:M-" class="name">M-</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(VAL &amp;REST VALS)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Computes the element-wise subtraction of the matrices or reals. Returns a fresh matrix.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:M/"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:M/" class="name">M/</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(VAL &amp;REST VALS)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Computes an element-wise division of the matrix from a real. Returns a fresh matrix.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:M/="/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:M/=" class="name">M/=</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(VAL &amp;REST VALS)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Compares matrices against each other or a real, returning T if they are element-wise equal by /=.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:M1NORM"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:M1NORM" class="name">M1NORM</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(M)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Computes the 1 norm of the matrix, namely the maximum of the sums of the columns.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:M2NORM"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:M2NORM" class="name">M2NORM</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(M)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Computes the 2 norm of the matrix, namely the square root of the sum of all squared elements.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:M&lt;"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:M&lt;" class="name">M&lt;</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(VAL &amp;REST VALS)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Compares matrices against each other or a real, returning T if they are element-wise ordered by &lt;.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:M&lt;="/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:M&lt;=" class="name">M&lt;=</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(VAL &amp;REST VALS)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Compares matrices against each other or a real, returning T if they are element-wise ordered by &lt;=.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:M="/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:M=" class="name">M=</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(VAL &amp;REST VALS)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Compares matrices against each other or a real, returning T if they are element-wise equal by =.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:M&gt;"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:M&gt;" class="name">M&gt;</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(VAL &amp;REST VALS)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Compares matrices against each other or a real, returning T if they are element-wise ordered by &gt;.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:M&gt;="/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:M&gt;=" class="name">M&gt;=</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(VAL &amp;REST VALS)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Compares matrices against each other or a real, returning T if they are element-wise ordered by &gt;=.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:MADJ"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MADJ" class="name">MADJ</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(M)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Computes the adjugate of the matrix.
+
+For MAT2 MAT3 MAT4, inlined variants exist. For MATN, an algorithm based on the cofactors is used.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:MAPPLY"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MAPPLY" class="name">MAPPLY</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(MAT OP)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Applies the function to each element of the matrix and maps the result of it to a new matrix.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:MAPPLYF"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MAPPLYF" class="name">MAPPLYF</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(MAT OP)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Applies the function to each element of the matrix and maps the result of it back into the matrix.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:MARR"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MARR" class="name">MARR</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(MAT)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Returns the backing array used by the matrix.
+
+This should be a SIMPLE-VECTOR with the elements of type FLOAT-TYPE.
+
+See MARR2
+See MARR3
+See MARR4
+See MARRN</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:MAT"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MAT" class="name">MAT</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(&amp;REST VALS)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Constructs a fitting matrix for the number of elements given.
+
+This only works for square numbers of elements, as otherwise it is not possible
+to guess what dimensions the matrix should have. In the case of a non-square
+number, an error is signalled.
+
+See MAT2
+See MAT3
+See MAT4
+See MATN</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:MAT-P"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MAT-P" class="name">MAT-P</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(MAT)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Returns T if the given object is of type MAT.
+
+See MAT2-P
+See MAT3-P
+See MAT4-P
+See MATN-P</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:MAT2"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MAT2" class="name">MAT2</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(&amp;OPTIONAL ELEMENTS)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Constructs a MAT2 from the given elements.
+
+ELEMENTS can be
+  NULL     --- The matrix is initialised with zeroes.
+  REAL     --- The matrix is initialised with this number.
+  SEQUENCE --- The sequence is mapped into the matrix
+               and the rest are initialised to 0.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:MAT2-P"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MAT2-P" class="name">MAT2-P</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(OBJECT)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Returns T if the given object is of type MAT2.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:MAT3"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MAT3" class="name">MAT3</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(&amp;OPTIONAL ELEMENTS)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Constructs a MAT3 from the given elements.
+
+ELEMENTS can be
+  NULL     --- The matrix is initialised with zeroes.
+  REAL     --- The matrix is initialised with this number.
+  SEQUENCE --- The sequence is mapped into the matrix
+               and the rest are initialised to 0.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:MAT3-P"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MAT3-P" class="name">MAT3-P</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(OBJECT)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Returns T if the given object is of type MAT3.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:MAT4"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MAT4" class="name">MAT4</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(&amp;OPTIONAL ELEMENTS)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Constructs a MAT4 from the given elements.
+
+ELEMENTS can be
+  NULL     --- The matrix is initialised with zeroes.
+  REAL     --- The matrix is initialised with this number.
+  SEQUENCE --- The sequence is mapped into the matrix
+               and the rest are initialised to 0.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:MAT4-P"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MAT4-P" class="name">MAT4-P</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(OBJECT)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Returns T if the given object is of type MAT4.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:MATF"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MATF" class="name">MATF</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(MAT &amp;REST VALS)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Maps the VALs into the matrix.
+
+The values will be mapped in row-major order.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:MATN"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MATN" class="name">MATN</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(R C &amp;OPTIONAL ELEMENTS)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Constructs a MATN of the requested size from the given elements.
+
+ELEMENTS can be
+  NULL     --- The matrix is initialised with zeroes.
+  REAL     --- The matrix is initialised with this number.
+  SEQUENCE --- The sequence is mapped into the matrix
+               and the rest are initialised to 0.
+
+Note that if R and C are both...
+  2 - A MAT2 is constructed
+  3 - A MAT3 is constructed
+  4 - A MAT4 is constructed
+instead of a MATN.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:MATN-P"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MATN-P" class="name">MATN-P</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(OBJECT)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Returns T if the given object is of type MATN.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:MBLOCK"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MBLOCK" class="name">MBLOCK</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(M Y1 X1 Y2 X2)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Returns the designated sub-matrix as a new matrix.
+Y1, X1 are the upper left corner, inclusive
+Y2, X2 are the lower right corner, exclusive</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:MBOTTOM"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MBOTTOM" class="name">MBOTTOM</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(M N)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring"/>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:MCOF"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MCOF" class="name">MCOF</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(M)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Computes the cofactor matrix.
+
+See MCOFACTOR</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:MCOFACTOR"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MCOFACTOR" class="name">MCOFACTOR</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(M Y X)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Computes the cofactor at the specified index of the matrix.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:MCOLS"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MCOLS" class="name">MCOLS</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(MAT)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Returns the number of columns the matrix stores.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:MCOPY"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MCOPY" class="name">MCOPY</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(M)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Creates a full copy of the matrix.
+
+See MCOPY2
+See MCOPY3
+See MCOPY4
+See MCOPYN</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:MCOPY2"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MCOPY2" class="name">MCOPY2</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(M2)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Creates a full copy of the MAT2.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:MCOPY3"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MCOPY3" class="name">MCOPY3</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(M3)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Creates a full copy of the MAT3.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:MCOPY4"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MCOPY4" class="name">MCOPY4</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(M4)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Creates a full copy of the MAT4.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:MCOPYN"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MCOPYN" class="name">MCOPYN</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(MN)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Creates a full copy of the MATN.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:MCREF"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MCREF" class="name">MCREF</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(MAT Y X)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Returns the element at the given cell in the matrix.
+
+See MCREF2
+See MCREF3
+See MCREF4
+See MCREFN</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:MCREF2"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MCREF2" class="name">MCREF2</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(MAT Y X)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Returns the element at the given cell in the MAT2.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:MCREF3"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MCREF3" class="name">MCREF3</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(MAT Y X)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Returns the element at the given cell in the MAT3.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:MCREF4"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MCREF4" class="name">MCREF4</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(MAT Y X)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Returns the element at the given cell in the MAT4.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:MCREFN"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MCREFN" class="name">MCREFN</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(MAT Y X)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Returns the element at the given cell in the MATN.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:MDET"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MDET" class="name">MDET</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(M)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Computes the determinant of the matrix.
+
+For MAT2 MAT3 MAT4, inlined variants exist. For MATN, an algorithm based on LU factorisation is used.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:MDIAG"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MDIAG" class="name">MDIAG</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(M)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Returns the diagonal values of the matrix as a list.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:MEIGEN"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MEIGEN" class="name">MEIGEN</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(M &amp;OPTIONAL (ITERATIONS 50))</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Computes an approximation of the eigenvalues of the matrix.
+
+An approach based on QR factorisation is used. The number of iterations dictates
+how many times the factorisation is repeated to make the result more accurate.
+Usually something around 50 iterations should give somewhat accurate results, but
+due to floating point limitations that may be off more significantly.
+
+Returns the eigenvalues as a list.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:MEYE"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MEYE" class="name">MEYE</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(N)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Constructs a square identity matrix of the requested size.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:MINORM"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MINORM" class="name">MINORM</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(M)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Computes the infinity norm of the matrix, namely the maximum of the sums of the rows.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:MINV"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MINV" class="name">MINV</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(M)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Computes the inverses of the matrix.
+
+This is only possible if the determinant is non-zero.
+
+For MAT2 MAT3 MAT4, inlined variants exist. For MATN, an algorithm based on the adjugate is used.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:MIREF"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MIREF" class="name">MIREF</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(MAT I)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Returns the element at the given index in the matrix.
+
+Elements are stored in row-major format.
+
+See MIREF2
+See MIREF3
+See MIREF4
+See MIREFN</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:MIREF2"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MIREF2" class="name">MIREF2</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(MAT I)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Returns the element at the given index in the MAT2.
+
+Elements are stored in row-major format.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:MIREF3"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MIREF3" class="name">MIREF3</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(MAT I)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Returns the element at the given index in the MAT3.
+
+Elements are stored in row-major format.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:MIREF4"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MIREF4" class="name">MIREF4</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(MAT I)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Returns the element at the given index in the MAT4.
+
+Elements are stored in row-major format.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:MIREFN"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MIREFN" class="name">MIREFN</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(MAT I)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Returns the element at the given index in the MATN.
+
+Elements are stored in row-major format.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:MLEFT"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MLEFT" class="name">MLEFT</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(M N)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Returns the leftmost N columns as a new matrix.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:MLU"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MLU" class="name">MLU</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(M &amp;OPTIONAL (PIVOT T))</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Computes an LU factorisation of the matrix.
+
+An approach based on Crout is used with on-the-fly pivotisation if requested.
+
+Returns the combined LU matrix, the permutation matrix, and the number of permutations that were done.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:MPIVOT"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MPIVOT" class="name">MPIVOT</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(M)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Attempts to do a partial pivotisation.
+
+Returns the pivotised matrix, the permutation matrix, and the number of permutations that were done.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:MQR"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MQR" class="name">MQR</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(MAT)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Computes the QR factorisation of the matrix.
+
+An approach based on givens rotations is used.
+
+Returns the Q and R matrices, which are fresh.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:MRAND"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MRAND" class="name">MRAND</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(R C &amp;KEY (MIN 0) (MAX 1))</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Constructs a matrix of the requested size where each element is randomized.
+
+MIN and MAX return the inclusive bounds of the numbers in the matrix.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:MRIGHT"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MRIGHT" class="name">MRIGHT</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(M N)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Returns the rightmost N columns as a new matrix.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:MROTATION"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MROTATION" class="name">MROTATION</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(V ANGLE)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Returns a 3D rotation matrix for the given vector as a MAT4.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:MROWS"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MROWS" class="name">MROWS</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(MAT)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Returns the number of rows the matrix stores.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:MSCALING"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MSCALING" class="name">MSCALING</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(V)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Returns a 3D scaling matrix for the given vector as a MAT4.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:MTOP"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MTOP" class="name">MTOP</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(M N)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Returns the topmost N rows as a new matrix.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:MTRACE"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MTRACE" class="name">MTRACE</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(M)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Computes the trace of the matrix.
+
+For MAT2 MAT3 MAT4, inlined variants exist. For MATN, a generic sum is used.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:MTRANSLATION"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MTRANSLATION" class="name">MTRANSLATION</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(V)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Returns a 3D translation matrix for the given vector as a MAT4.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:MTRANSPOSE"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MTRANSPOSE" class="name">MTRANSPOSE</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(M)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Computes the transpose of the matrix.
+
+For MAT2 MAT3 MAT4, inlined variants exist. For MATN, a generic swap is used.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:MUNIFORM"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:MUNIFORM" class="name">MUNIFORM</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(R C ELEMENT)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Constructs a matrix of the requested size where each element is initialised to the requested element.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:M~="/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:M~=" class="name">M~=</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(VAL &amp;REST VALS)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Compares matrices against each other or a real, returning T if they are element-wise equal by ~=.
+
+See ~=</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:N*M"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:N*M" class="name">N*M</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(VAL &amp;REST VALS)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Computes a modifying matrix multiplication, but modifying the right-hand side.
+
+See NM*</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:NM*"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:NM*" class="name">NM*</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(VAL &amp;REST VALS)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Computes a modifying matrix multiplication.
+
+If the other operand is a real, the matrix is multiplied with the real element-wise.
+If the other operand is a matrix, they are multiplied as per matrix multiplication.
+Note that this only works for square matrix against square matrix, as otherwise a size
+change would occur, which is not possible to do in a modifying variant. The two matrices
+must agree on the size as per matrix multiplication.
+If the other operand is a vector, the vector is modified.
+
+See N*M</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:NM+"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:NM+" class="name">NM+</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(VAL &amp;REST VALS)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Computes the element-wise addition of the matrices or reals. Returns the first matrix, modified.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:NM-"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:NM-" class="name">NM-</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(VAL &amp;REST VALS)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Computes the element-wise subtraction of the matrices or reals. Returns the first matrix, modified.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:NM/"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:NM/" class="name">NM/</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(VAL &amp;REST VALS)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Computes an element-wise division of the matrix from a real. Returns the modified, first matrix.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:NMROTATE"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:NMROTATE" class="name">NMROTATE</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(M V ANGLE)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Rotates the given matrix by the vector. Returns the modified matrix.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:NMSCALE"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:NMSCALE" class="name">NMSCALE</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(M V)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Scales the given matrix by the vector. Returns the modified matrix.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:NMSWAP-COL"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:NMSWAP-COL" class="name">NMSWAP-COL</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(M K L)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Modifies the matrix by swapping the Kth column with the Lth column.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:NMSWAP-ROW"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:NMSWAP-ROW" class="name">NMSWAP-ROW</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(M K L)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Modifies the matrix by swapping the Kth row with the Lth row.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:NMTRANSLATE"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:NMTRANSLATE" class="name">NMTRANSLATE</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(M V)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Translates the given matrix by the vector. Returns the modified matrix.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:WRITE-MATRIX"/>
+                  <article>
+                    <header class="function">
+                      <span class="type">function</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:WRITE-MATRIX" class="name">WRITE-MATRIX</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(M STREAM &amp;KEY (FORMAT :NICE))</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Writes the matrix in a certain format, by default a human-readable one.
+
+FORMAT can be one of
+  :NICE    - Prints it in a nice representation intended for humans.
+  :WOLFRAM - Prints it in the format for Wolfram Alpha, namely {{a,b..},..}
+  :ARRAY   - Prints it as a common lisp 2D array.
+
+If the STREAM is NIL, a string of the output is returned. Otherwise the
+matrix itself is returned.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:WITH-FAST-MATCASE"/>
+                  <article>
+                    <header class="macro">
+                      <span class="type">macro</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:WITH-FAST-MATCASE" class="name">WITH-FAST-MATCASE</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(&amp;REST ARGS)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Does an etypecase on MAT and an appropriate WITH-FAST-MATREF on each case.
+
+The body should be an expression of (MAT-TYPE form*). For each
+matrix type /except/ for MATN, the forms will be wrapped in an
+appropriate WITH-FAST-MATREF. This is not done for MATN, as often
+times a different approach to manipulating the matrix than by
+direct reference is preferable for that case.
+
+See WITH-FAST-MATREF</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:WITH-FAST-MATREF"/>
+                  <article>
+                    <header class="macro">
+                      <span class="type">macro</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:WITH-FAST-MATREF" class="name">WITH-FAST-MATREF</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(&amp;REST ARGS)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Allows efficient referencing to matrix elements.
+
+ACCESSOR designates the name of the local macro that will allow
+you to both read and set the matrix element at the given position
+It will take either one or two arguments. If two, they are row and
+column of the cell to dereference, and if one, it is the row-major
+index of the element to dereference.
+
+You must also designate the proper number of columns stored in the
+matrix. This is done because often times when you will want to use
+this macro, you'll already know the number of columns anyway.
+Retrieving it again would be wasteful.
+
+You should use this whenever you need to reference elements in a loop
+or need to do more than one reference overall.</pre>
+                  </article>
+                </li><li>
+                  <a name="3D-MATRICES:WITH-FAST-MATREFS"/>
+                  <article>
+                    <header class="macro">
+                      <span class="type">macro</span>
+                      <code>
+                        <h4><a href="#3D-MATRICES:WITH-FAST-MATREFS" class="name">WITH-FAST-MATREFS</a></h4>
+                        <span class="qualifiers"></span>
+                        <span class="arguments">(&amp;REST ARGS)</span>
+                      </code>
+                    </header>
+                    <pre class="docstring">Allows efficient referencing of multiple matrices.
+
+Each binding must be of the form that WITH-FAST-MATREF expects.
+
+See WITH-FAST-MATREF</pre>
+                  </article>
+                </li></ul>
+            </li></ul>
+        </article>
+      
+    </div>
+  </body>
+</html>
