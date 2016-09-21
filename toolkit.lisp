@@ -60,3 +60,8 @@
 (declaim (inline ~=))
 (defun ~= (a b)
   (< (abs (- a b)) *eps*))
+
+(defmacro with-floats (&environment env bindings &body body)
+  `(let ,(loop for (var val) in bindings
+               collect `(,var (the ,*float-type* ,(ensure-float-param val env))))
+     ,@body))

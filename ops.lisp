@@ -790,6 +790,42 @@
                     (- (* z x c) (* y s)) (+ (* z y c) (* x s)) (+ c (* z z c))       0
                     0                     0                     0                     1)))))))
 
+(declaim (ftype (function (vec3 vec3 vec3) mat4) mlookat))
+(define-ofun mlookat (eye target up)
+  (let* ((z (nvunit (v- eye target)))
+         (x (nvunit (vc up z)))
+         (y (nvunit (vc z x))))
+    (mat (vx3 x) (vx3 y) (vx3 z) (+ (* (vx3 eye) (vx3 x)) (* (vy3 eye) (vx3 y)) (* (vz3 eye) (vx3 z)))
+         (vy3 x) (vy3 y) (vy3 z) (+ (* (vx3 eye) (vy3 x)) (* (vy3 eye) (vy3 y)) (* (vz3 eye) (vy3 z)))
+         (vz3 x) (vz3 y) (vz3 z) (+ (* (vx3 eye) (vz3 x)) (* (vy3 eye) (vz3 y)) (* (vz3 eye) (vz3 z)))
+         #.(ensure-float 0) #.(ensure-float 0) #.(ensure-float 0) #.(ensure-float 1))))
+
+(declaim (ftype (function (real real real real real real) mat4) mfrustum))
+(define-ofun mfrustum (left right bottom top near far)
+  (with-floats ((f2 2) (f-2 -2) (f0 0) (f-1 -1)
+                (l left) (r right) (b bottom) (u top) (n near) (f far))
+    (mat (/ (* f2 n) (- r l)) f0 (/ (+ r l) (- r l)) f0
+         f0 (/ (* f2 n) (- u b)) (/ (+ u b) (- u b)) f0
+         f0 f0 (- (/ (+ f n) (- f n))) (/ (* f-2 f n) (- f n))
+         f0 f0 f-1 f0)))
+
+(declaim (ftype (function (real real real real) mat4) mperspective))
+(define-ofun mperspective (fovy aspect near far)
+  ;; http://nehe.gamedev.net/article/replacement_for_gluperspective/21002/
+  (with-floats ((fpi PI) (f360 360) (fovy fovy) (aspect aspect) (near near) (far far))
+    (let* ((fh (* (the single-float (tan (* (/ fovy f360) fpi))) near))
+           (fw (* fh aspect)))
+      (mfrustum (- fw) fw (- fh) fh near far))))
+
+(declaim (ftype (function (real real real real real real) mat4) mortho))
+(define-ofun mortho (left right bottom top near far)
+  (with-floats ((f2 2) (f-2 -2) (f0 0) (f1 1)
+                (r right) (l left) (b bottom) (u top) (n near) (f far))
+    (mat (/ f2 (- r l)) f0 f0 (- (/ (+ r l) (- r l)))
+         f0 (/ f2 (- u b)) f0 (- (/ (+ u b) (- u b)))
+         f0 f0 (/ f-2 (- f n)) (- (/ (+ f n) (- f n)))
+         f0 f0 f0 f1)))
+
 (declaim (ftype (function (mat4 vec3) mat4) nmtranslate))
 (define-ofun nmtranslate (m v)
   (declare (inline mtranslation))
@@ -804,6 +840,11 @@
 (define-ofun nmrotate (m v angle)
   (declare (inline mrotation))
   (nm* m (mrotation v angle)))
+
+(declaim (ftype (function (mat4 vec3 vec3 vec3) mat4) nmlookat))
+(define-ofun nmlookat (m eye target up)
+  (declare (inline mlookat))
+  (nm* m (mlookat eye target up)))
 
 (define-ofun m1norm (m)
   (let ((max #.(ensure-float 0)))

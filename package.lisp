@@ -49,9 +49,14 @@
    #:mtranslation
    #:mscaling
    #:mrotation
+   #:mlookat
+   #:mfrustum
+   #:mortho
+   #:mperspective
    #:nmtranslate
    #:nmscale
    #:nmrotate
+   #:nmlookat
    #:m1norm
    #:minorm
    #:m2norm

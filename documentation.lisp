@@ -275,6 +275,26 @@ Returns the combined LU matrix, the permutation matrix, and the number of permut
   (function mrotation
     "Returns a 3D rotation matrix for the given vector as a MAT4.")
 
+  (function mlookat
+    "Returns a view translation matrix that should \"look at\" TARGET from EYE where UP is the up vector.")
+
+  (function mfrustum
+    "Returns a 3D frustum projection view matrix.
+
+See MPERSPECTIVE")
+
+  (function mortho
+    "Returns a 3D orthographic projection view matrix.")
+
+  (function mperspective
+    "Returns a 3D perspective projection view matrix.
+
+FOVY       -- The field of view (how \"zoomy\" it is)
+ASPECT     -- The aspect ratio of the screen
+NEAR / FAR -- The Z near and far clipping planes
+
+See MFRUSTUM")
+
   (function nmtranslate
     "Translates the given matrix by the vector. Returns the modified matrix.")
 
@@ -282,7 +302,12 @@ Returns the combined LU matrix, the permutation matrix, and the number of permut
     "Scales the given matrix by the vector. Returns the modified matrix.")
 
   (function nmrotate
-    "Rotates the given matrix by the vector. Returns the modified matrix.")
+    "Rotates the given matrix around the vector by angle. Returns the modified matrix.")
+
+  (function nmlookat
+    "Modifies the matrix to look at TARGET from the EYE.
+
+See MLOOKAT.")
 
   (function m1norm
     "Computes the 1 norm of the matrix, namely the maximum of the sums of the columns.")
@@ -630,4 +655,7 @@ SPEED 3, SPACE 3, DEBUG 0, SAFETY 1, COMPILATION-SPEED 0")
 Otherwise it can only be a function in which case it is returned verbatim.")
 
   (function ~=
-    "Does \"approximate comparison\" by testing whether the two numbers are within *EPS* from each other."))
+    "Does \"approximate comparison\" by testing whether the two numbers are within *EPS* from each other.")
+
+  (function with-floats
+    "Like LET, except ensuring that each value is of the appropriate float type."))
