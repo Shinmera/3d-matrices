@@ -65,3 +65,12 @@
   `(let ,(loop for (var val) in bindings
                collect `(,var (the ,*float-type* ,(ensure-float-param val env))))
      ,@body))
+
+(defmacro defsetf* (name args values &body body)
+  #-(or ecl ccl)
+  `(defsetf ,name ,args ,values ,@body)
+  #+(or ecl ccl) ;; Compiler bug workarounds, hooray.
+  (if (eql (first args) '&environment)
+      `(defsetf ,name ,(cddr args) ,values
+         (let (,(second args)) ,@body))
+      `(defsetf ,name ,args ,values ,@body)))

@@ -45,27 +45,31 @@
              (mrows a) (mcols a) ',type)
      (write-matrix a stream)))
 
+(defmacro define-mat-accessor (miref mcref marr size)
+  `(progn
+     (declaim (inline ,miref))
+     (declaim (ftype (function (mat2 (integer 0 ,(1- (* size size)))) float-type) ,miref))
+     (define-ofun ,miref (mat i)
+       (aref (,marr mat) i))
+
+     (defsetf* ,miref (&environment env mat i) (value)
+       `(setf (aref (,marr ,mat) ,i) ,(ensure-float-param value env)))
+
+     (declaim (inline ,mcref))
+     (declaim (ftype (function (mat2 (integer 0 1) (integer 0 1)) float-type) ,mcref))
+     (define-ofun ,mcref (mat y x)
+       (aref (,marr mat) (+ (* y ,size) x)))
+     
+     (defsetf* ,mcref (&environment env mat y x) (value)
+       `(setf (aref (,marr ,mat) (+ (* ,y ,size) ,x)) ,(ensure-float-param value env)))))
+
 (defstruct (mat2 (:conc-name NIL)
                    (:constructor %mat2 (marr2))
                    (:copier NIL)
                    (:predicate mat2-p))
   (marr2 NIL :type (simple-array float-type (4))))
 
-(declaim (inline miref2))
-(declaim (ftype (function (mat2 (integer 0 3)) float-type) miref2))
-(define-ofun miref2 (mat i)
-  (aref (marr2 mat) i))
-
-(defsetf miref2 (&environment env mat i) (value)
-  `(setf (aref (marr2 ,mat) ,i) ,(ensure-float-param value env)))
-
-(declaim (inline mcref2))
-(declaim (ftype (function (mat2 (integer 0 1) (integer 0 1)) float-type) mcref2))
-(define-ofun mcref2 (mat y x)
-  (aref (marr2 mat) (+ (* y 2) x)))
-
-(defsetf mcref2 (&environment env mat y x) (value)
-  `(setf (aref (marr2 ,mat) (+ (* ,y 2) ,x)) ,(ensure-float-param value env)))
+(define-mat-accessor miref2 mcref2 marr2 2)
 
 (define-ofun mat2 (&optional elements)
   (%mat2 (%proper-array 4 elements)))
@@ -95,21 +99,7 @@
                    (:predicate mat3-p))
   (marr3 NIL :type (simple-array float-type (9))))
 
-(declaim (inline miref3))
-(declaim (ftype (function (mat3 (integer 0 8)) float-type) miref3))
-(define-ofun miref3 (mat i)
-  (aref (marr3 mat) i))
-
-(defsetf miref3 (&environment env mat i) (value)
-  `(setf (aref (marr3 ,mat) ,i) ,(ensure-float-param value env)))
-
-(declaim (inline mcref3))
-(declaim (ftype (function (mat3 (integer 0 2) (integer 0 2)) float-type) mcref3))
-(define-ofun mcref3 (mat y x)
-  (aref (marr3 mat) (+ (* y 3) x)))
-
-(defsetf mcref3 (&environment env mat y x) (value)
-  `(setf (aref (marr3 ,mat) (+ (* ,y 3) ,x)) ,(ensure-float-param value env)))
+(define-mat-accessor miref3 mcref3 marr3 3)
 
 (define-ofun mat3 (&optional elements)
   (%mat3 (%proper-array 9 elements)))
@@ -139,21 +129,7 @@
                    (:predicate mat4-p))
   (marr4 NIL :type (simple-array float-type (16))))
 
-(declaim (inline miref4))
-(declaim (ftype (function (mat4 (integer 0 15)) float-type) miref4))
-(define-ofun miref4 (mat i)
-  (aref (marr4 mat) i))
-
-(defsetf miref4 (&environment env mat i) (value)
-  `(setf (aref (marr4 ,mat) ,i) ,(ensure-float-param value env)))
-
-(declaim (inline mcref4))
-(declaim (ftype (function (mat4 (integer 0 3) (integer 0 3)) float-type) mcref4))
-(define-ofun mcref4 (mat y x)
-  (aref (marr4 mat) (+ (* y 4) x)))
-
-(defsetf mcref4 (&environment env mat y x) (value)
-  `(setf (aref (marr4 ,mat) (+ (* ,y 4) ,x)) ,(ensure-float-param value env)))
+(define-mat-accessor miref4 mcref4 marr4 4)
 
 (define-ofun mat4 (&optional elements)
   (%mat4 (%proper-array 16 elements)))
@@ -190,7 +166,7 @@
 (define-ofun mirefn (mat i)
   (aref (marrn mat) i))
 
-(defsetf mirefn (&environment env mat i) (value)
+(defsetf* mirefn (&environment env mat i) (value)
   `(setf (aref (marrn ,mat) ,i) ,(ensure-float-param value env)))
 
 (declaim (inline mcrefn))
@@ -198,7 +174,7 @@
 (define-ofun mcrefn (mat y x)
   (aref (marrn mat) (+ (* y (%cols mat)) x)))
 
-(defsetf mcrefn (&environment env mat y x) (value)
+(defsetf* mcrefn (&environment env mat y x) (value)
   `(setf (aref (marrn ,mat) (+ (* ,y (%cols ,mat)) ,x)) ,(ensure-float-param value env)))
 
 (define-ofun matn (r c &optional elements)
