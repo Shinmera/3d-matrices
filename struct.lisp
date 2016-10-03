@@ -277,6 +277,20 @@
     (mat4 (mcref4 mat y x))
     (matn (mcrefn mat y x))))
 
+(defsetf* miref (mat i) (value)
+  `(etypecase ,mat
+     (mat2 (setf (miref2 ,mat ,i) ,value))
+     (mat3 (setf (miref3 ,mat ,i) ,value))
+     (mat4 (setf (miref4 ,mat ,i) ,value))
+     (matn (setf (mirefn ,mat ,i) ,value))))
+
+(defsetf* mcref (mat y x) (value)
+  `(etypecase ,mat
+     (mat2 (setf (mcref2 ,mat ,y ,x) ,value))
+     (mat3 (setf (mcref3 ,mat ,y ,x) ,value))
+     (mat4 (setf (mcref4 ,mat ,y ,x) ,value))
+     (matn (setf (mcrefn ,mat ,y ,x) ,value))))
+
 (declaim (inline mcols))
 (declaim (ftype (function (mat) mat-dim) mcols))
 (defun mcols (mat)
