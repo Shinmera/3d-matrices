@@ -45,23 +45,23 @@
              (mrows a) (mcols a) ',type)
      (write-matrix a stream)))
 
-(defmacro define-mat-accessor (miref mcref marr size)
+(defmacro define-mat-accessor (mtype miref mcref marr size)
   `(progn
      (declaim (inline ,miref))
-     (declaim (ftype (function (mat2 (integer 0 ,(1- (* size size)))) float-type) ,miref))
+     (declaim (ftype (function (,mtype (integer 0 ,(1- (* size size)))) float-type) ,miref))
      (define-ofun ,miref (mat i)
        (aref (,marr mat) i))
 
      (defsetf* ,miref (&environment env mat i) (value)
-       `(setf (aref (,marr ,mat) ,i) ,(ensure-float-param value env)))
+       `(setf (aref (,',marr ,mat) ,i) ,(ensure-float-param value env)))
 
      (declaim (inline ,mcref))
-     (declaim (ftype (function (mat2 (integer 0 1) (integer 0 1)) float-type) ,mcref))
+     (declaim (ftype (function (,mtype (integer 0 ,(1- size)) (integer 0 ,(1- size))) float-type) ,mcref))
      (define-ofun ,mcref (mat y x)
        (aref (,marr mat) (+ (* y ,size) x)))
      
      (defsetf* ,mcref (&environment env mat y x) (value)
-       `(setf (aref (,marr ,mat) (+ (* ,y ,size) ,x)) ,(ensure-float-param value env)))))
+       `(setf (aref (,',marr ,mat) (+ (* ,y ,,size) ,x)) ,(ensure-float-param value env)))))
 
 (defstruct (mat2 (:conc-name NIL)
                    (:constructor %mat2 (marr2))
@@ -69,7 +69,7 @@
                    (:predicate mat2-p))
   (marr2 NIL :type (simple-array float-type (4))))
 
-(define-mat-accessor miref2 mcref2 marr2 2)
+(define-mat-accessor mat2 miref2 mcref2 marr2 2)
 
 (define-ofun mat2 (&optional elements)
   (%mat2 (%proper-array 4 elements)))
@@ -99,7 +99,7 @@
                    (:predicate mat3-p))
   (marr3 NIL :type (simple-array float-type (9))))
 
-(define-mat-accessor miref3 mcref3 marr3 3)
+(define-mat-accessor mat3 miref3 mcref3 marr3 3)
 
 (define-ofun mat3 (&optional elements)
   (%mat3 (%proper-array 9 elements)))
@@ -129,7 +129,7 @@
                    (:predicate mat4-p))
   (marr4 NIL :type (simple-array float-type (16))))
 
-(define-mat-accessor miref4 mcref4 marr4 4)
+(define-mat-accessor mat4 miref4 mcref4 marr4 4)
 
 (define-ofun mat4 (&optional elements)
   (%mat4 (%proper-array 16 elements)))
