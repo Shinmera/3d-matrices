@@ -20,4 +20,5 @@
                (:file "ops")
                (:file "documentation"))
   :depends-on (:documentation-utils
-               :3d-vectors))
+               :3d-vectors)
+  :in-order-to ((asdf:test-op (asdf:test-op :3d-matrices-test))))
