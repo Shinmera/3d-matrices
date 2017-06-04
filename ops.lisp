@@ -237,7 +237,7 @@
          (case (length vals)
            (0 `(mapply ,val #',',op))
            (1 `(,',2mat-name ,val ,(first vals)))
-           (T `(,',nname (,',2mat-name ,val ,(first val)) ,@(rest vals))))))))
+           (T `(,',nname (,',2mat-name ,val ,(first vals)) ,@(rest vals))))))))
 
 (defmacro define-nmatop (name op &optional body)
   (let ((2mat-name (intern (format NIL "~a-~a" '2mat name))))
@@ -271,7 +271,7 @@
          (case (length vals)
            (0 `(mapplyf ,val #',',op))
            (1 `(,',2mat-name ,val ,(first vals)))
-           (T `(,',name (,',2mat-name ,val ,(first val)) ,@(rest vals))))))))
+           (T `(,',name (,',2mat-name ,val ,(first vals)) ,@(rest vals))))))))
 
 (define-matop m+ nm+ +)
 (define-nmatop nm+ +)
