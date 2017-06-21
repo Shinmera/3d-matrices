@@ -322,7 +322,7 @@
                                           (f ,b (%cols ,b))
                                           (g ,m (%cols ,b)))
                         (dotimes (i (%rows ,a) ,m)
-                          (loop for sum = ,(ensure-float 0)
+                          (loop for sum of-type #.*float-type* = ,(ensure-float 0)
                                 for j from 0 below (%cols ,b)
                                 do (loop for k from 0 below (%cols ,a)
                                          do (setf sum (+ (* (e i k) (f k j)) sum)))
