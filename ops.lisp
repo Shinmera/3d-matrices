@@ -813,7 +813,7 @@
 (define-ofun mperspective (fovy aspect near far)
   ;; http://nehe.gamedev.net/article/replacement_for_gluperspective/21002/
   (with-floats ((fpi PI) (f360 360) (fovy fovy) (aspect aspect) (near near) (far far))
-    (let* ((fh (* (the single-float (tan (* (/ fovy f360) fpi))) near))
+    (let* ((fh (* (the #.*float-type* (tan (* (/ fovy f360) fpi))) near))
            (fw (* fh aspect)))
       (mfrustum (- fw) fw (- fh) fh near far))))
 

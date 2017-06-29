@@ -21,8 +21,8 @@
                               (floor (sqrt most-positive-fixnum)))))
 
 (defvar *eps* (ecase *float-type*
-                (single-float 0.00001)
-                (double-float 0.00000000001)))
+                (single-float 0.00001s0)
+                (double-float 0.00000000001d0)))
 (declaim (type #.*float-type* *eps*))
 
 (deftype mat-dim ()
