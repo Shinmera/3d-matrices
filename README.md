@@ -40,11 +40,10 @@ Matrices are basically a struct that contains a simple-vector of floats. This me
 
 If you're coming to this library with the intention of using it to do 3D math, you'll most likely be mostly looking for how to create translation, rotation, and scaling matrices. Specific functions exist for this that take care of it for you. They all operate on `mat4`s and take a `vec3` as argument.
 
-    (let ((mat (mat4 1)))
-      (nmtranslate mat (3d-vectors:vec 1 2 3))
-      (nmscale mat (3d-vectors:vec 1 2 3))
-      (nmrotate mat 3d-vectors:+vx+ 90)
-      (m* mat (vec 1 2 3)))
+    (let ((mat (mtranslation (vec 1 2 3)))
+      (nmscale mat (vec 1 2 3))
+      (nmrotate mat +vx+ 90)
+      (m* mat (vec 1 2 3 4)))
 
 Aside from translations you'll probably also want to set up a projection and a camera. You can do this, too.
 
