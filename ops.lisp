@@ -795,9 +795,9 @@
   (let* ((z (nvunit (v- eye target)))
          (x (nvunit (vc up z)))
          (y (vc z x)))
-    (mat (vx3 x) (vx3 y) (vx3 z) (- (v. x eye))
-         (vy3 x) (vy3 y) (vy3 z) (- (v. y eye))
-         (vz3 x) (vz3 y) (vz3 z) (- (v. z eye))
+    (mat (vx3 x) (vy3 x) (vz3 x) (- (v. x eye))
+         (vx3 y) (vy3 y) (vz3 y) (- (v. y eye))
+         (vx3 z) (vy3 z) (vz3 z) (- (v. z eye))
          #.(ensure-float 0) #.(ensure-float 0) #.(ensure-float 0) #.(ensure-float 1))))
 
 (declaim (ftype (function (real real real real real real) mat4) mfrustum))
