@@ -15,6 +15,7 @@ env:
 install:
   - curl -L https://raw.githubusercontent.com/roswell/roswell/release/scripts/install-for-ci.sh | sh
   - ros install shinmera/parachute
+  - ros install shinmera/3d-vectors
   - ros install shinmera/3d-matrices
 
 cache:
