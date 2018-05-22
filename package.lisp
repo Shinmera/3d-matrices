@@ -8,6 +8,14 @@
 (defpackage #:3d-matrices
   (:nicknames #:org.shirakumo.flare.matrix)
   (:use #:cl #:3d-vectors)
+  (:import-from
+   #:3d-vectors
+   #:define-ofun
+   #:ensure-float
+   #:ensure-float-param
+   #:defsetf*
+   #:*float-type*
+   #:float-type)
   ;; ops.lisp
   (:export
    #:with-fast-matref
