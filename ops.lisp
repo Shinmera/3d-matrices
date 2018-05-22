@@ -313,8 +313,7 @@
                                                             (the ,*float-type* ,b))) (marrn ,a))
                       ,m))
                    (matn
-                    (unless (and (= (%rows ,a) (%cols ,b))
-                                 (= (%cols ,a) (%rows ,b)))
+                    (unless (= (%cols ,a) (%rows ,b))
                       (error "Matrices are of incompatible size:~%~a~%~a"
                              (write-matrix a NIL) (write-matrix b NIL)))
                     (let ((,m (matn (%rows ,a) (%cols ,b))))
