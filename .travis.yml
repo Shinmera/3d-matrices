@@ -24,4 +24,4 @@ cache:
     - $HOME/.config/common-lisp
 
 script:
-  - ros -e "(asdf:test-system :3d-matrices-test)" -q
+  - ros -s 3d-matrices-test -e "(parachute:test-toplevel :3d-matrices-test)" -q

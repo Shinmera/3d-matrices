@@ -7,13 +7,8 @@
 (in-package #:cl-user)
 (defpackage #:3d-matrices-test
   (:nicknames #:org.shirakumo.flare.matrix.test)
-  (:use #:cl #:parachute #:3d-matrices #:3d-vectors)
-  (:export #:run))
+  (:use #:cl #:parachute #:3d-matrices #:3d-vectors))
 (in-package #:org.shirakumo.flare.matrix.test)
-
-(defun run ()
-  (when (find :failed (results (test :3d-matrices-test)) :key #'status)
-    (error "Tests failed.")))
 
 (defun ~= (a b)
   (< (abs (- a b)) 0.00001))

@@ -14,4 +14,4 @@
   :serial T
   :components ((:file "test"))
   :depends-on (:3d-matrices :parachute)
-  :perform (asdf:test-op (op c) (uiop:symbol-call :3d-matrices-test :run)))
+  :perform (asdf:test-op (op c) (uiop:symbol-call :parachute :test :3d-matrices-test)))
