@@ -567,7 +567,7 @@
 
 (declaim (ftype (function (mat mat-dim mat-dim) float-type) mcoefficient))
 (define-ofun mcofactor (m y x)
-  (* (mcref m y x) (mminor m y x)))
+  (* (if (evenp (+ y x)) 1 -1) (mminor m y x)))
 
 (declaim (ftype (function (mat) mat) mcof))
 (define-ofun mcof (m)
