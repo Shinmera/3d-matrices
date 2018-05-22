@@ -52,7 +52,7 @@
      (define-ofun ,miref (mat i)
        (aref (,marr mat) i))
 
-     (defsetf* ,miref (&environment env mat i) (value)
+     (defsetf* ,miref (mat i &environment env) (value)
        `(setf (aref (,',marr ,mat) ,i) ,(ensure-float-param value env)))
 
      (declaim (inline ,mcref))
@@ -60,7 +60,7 @@
      (define-ofun ,mcref (mat y x)
        (aref (,marr mat) (+ (* y ,size) x)))
      
-     (defsetf* ,mcref (&environment env mat y x) (value)
+     (defsetf* ,mcref (mat y x &environment env) (value)
        `(setf (aref (,',marr ,mat) (+ (* ,y ,,size) ,x)) ,(ensure-float-param value env)))))
 
 (defstruct (mat2 (:conc-name NIL)
@@ -166,7 +166,7 @@
 (define-ofun mirefn (mat i)
   (aref (marrn mat) i))
 
-(defsetf* mirefn (&environment env mat i) (value)
+(defsetf* mirefn (mat i &environment env) (value)
   `(setf (aref (marrn ,mat) ,i) ,(ensure-float-param value env)))
 
 (declaim (inline mcrefn))
@@ -174,7 +174,7 @@
 (define-ofun mcrefn (mat y x)
   (aref (marrn mat) (+ (* y (%cols mat)) x)))
 
-(defsetf* mcrefn (&environment env mat y x) (value)
+(defsetf* mcrefn (mat y x &environment env) (value)
   `(setf (aref (marrn ,mat) (+ (* ,y (%cols ,mat)) ,x)) ,(ensure-float-param value env)))
 
 (define-ofun matn (r c &optional elements)
