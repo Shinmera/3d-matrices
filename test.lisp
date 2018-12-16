@@ -19,12 +19,12 @@
   :parent 3d-matrices)
 
 (defmacro define-matrix-struct-test (n)
-  (let* ((matx (intern (format NIL "~a~a" 'mat n)))
-         (maty (intern (format NIL "~a~a" 'mat (case n (2 3) (3 4) (4 2)))))
-         (mcopyx (intern (format NIL "~a~a" 'mcopy n)))
-         (matx-p (intern (format NIL "~a~a" matx '-p)))
-         (mirefx (intern (format NIL "~a~a" 'miref n)))
-         (mcrefx (intern (format NIL "~a~a" 'mcref n))))
+  (let* ((matx (3d-matrices::intern* 'mat n))
+         (maty (3d-matrices::intern* 'mat (case n (2 3) (3 4) (4 2))))
+         (mcopyx (3d-matrices::intern* 'mcopy n))
+         (matx-p (3d-matrices::intern* matx '-p))
+         (mirefx (3d-matrices::intern* 'miref n))
+         (mcrefx (3d-matrices::intern* 'mcref n)))
     `(define-test ,matx
        :parent struct
        :compile-at :execute

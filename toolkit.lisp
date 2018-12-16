@@ -37,3 +37,8 @@
   `(let ,(loop for (var val) in bindings
                collect `(,var (the ,*float-type* ,(ensure-float-param val env))))
      ,@body))
+
+(defun intern* (&rest parts)
+  (let ((*print-case* (readtable-case *readtable*))
+        (*package* #.*package*))
+    (intern (format NIL "~{~a~}" parts) #.*package*)))

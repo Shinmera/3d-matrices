@@ -149,7 +149,7 @@
                     ,mnmn))))))))
 
 (defmacro define-matcomp (name op &optional (comb 'and))
-  (let ((2mat-name (intern (format NIL "~a-~a" '2mat name))))
+  (let ((2mat-name (intern* '2mat "-" name)))
     (flet ((unroll (size)
              (loop for i from 0 below size
                    collect `(,op a (e ,i)))))
@@ -201,7 +201,7 @@
 (define-matcomp m>= >=)
 
 (defmacro define-matop (name nname op &optional body)
-  (let ((2mat-name (intern (format NIL "~a-~a" '2mat name))))
+  (let ((2mat-name (intern* '2mat "-" name)))
     `(progn
        ,@(unless body
            `((declaim (ftype (function ((or mat real) &rest (or mat real)) mat) ,name))
@@ -240,7 +240,7 @@
            (T `(,',nname (,',2mat-name ,val ,(first vals)) ,@(rest vals))))))))
 
 (defmacro define-nmatop (name op &optional body)
-  (let ((2mat-name (intern (format NIL "~a-~a" '2mat name))))
+  (let ((2mat-name (intern* '2mat "-" name)))
     `(progn
        ,@(unless body
            `((declaim (ftype (function ((or mat real) &rest (or mat real)) mat) ,name))
