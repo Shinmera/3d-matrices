@@ -50,18 +50,33 @@
      (declaim (inline ,miref))
      (declaim (ftype (function (,mtype (integer 0 ,(1- (* size size)))) float-type) ,miref))
      (define-ofun ,miref (mat i)
+       #+lispworks
+       (unless (< -1 i (length (,marr mat)))
+         (error "~d is out of bounds for ~a" i mat))
        (aref (,marr mat) i))
 
      (defsetf* ,miref (mat i &environment env) (value)
-       `(setf (aref (,',marr ,mat) ,i) ,(ensure-float-param value env)))
+       `(progn
+          #+lispworks
+          (unless (< -1 ,i (length (,',marr ,mat)))
+            (error "~d is out of bounds for ~a" ,i ,mat))
+          (setf (aref (,',marr ,mat) ,i) ,(ensure-float-param value env))))
 
      (declaim (inline ,mcref))
      (declaim (ftype (function (,mtype (integer 0 ,(1- size)) (integer 0 ,(1- size))) float-type) ,mcref))
      (define-ofun ,mcref (mat y x)
-       (aref (,marr mat) (+ (* y ,size) x)))
+       (let ((i (+ (* y ,size) x)))
+         #+lispworks
+         (unless (< -1 i (length (,marr mat)))
+           (error "~d,~d is out of bounds for ~a" y x mat))
+         (aref (,marr mat) i)))
      
      (defsetf* ,mcref (mat y x &environment env) (value)
-       `(setf (aref (,',marr ,mat) (+ (* ,y ,,size) ,x)) ,(ensure-float-param value env)))))
+       `(let ((#1=(gensym "I") (+ (* ,y ,,size) ,x)))
+          #+lispworks
+          (unless (< -1 i (length (,',marr 'mat)))
+            (error "~d,~d is out of bounds for ~a" ,y ,x ,mat))
+          (setf (aref (,',marr ,mat) #1#) ,(ensure-float-param value env))))))
 
 (defstruct (mat2 (:conc-name NIL)
                    (:constructor %mat2 (marr2))
