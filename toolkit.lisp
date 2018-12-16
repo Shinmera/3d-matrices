@@ -15,7 +15,7 @@
                               (floor (sqrt most-positive-fixnum)))))
 
 (defvar *eps* (ecase *float-type*
-                (single-float 0.00001s0)
+                (single-float 0.00001f0)
                 (double-float 0.00000000001d0)))
 (declaim (type #.*float-type* *eps*))
 
