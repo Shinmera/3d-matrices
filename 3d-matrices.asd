@@ -7,7 +7,7 @@
 
 (asdf:defsystem 3d-matrices
   :version "1.0.0"
-  :license "Artistic"
+  :license "zlib"
   :author "Nicolas Hafner <shinmera@tymoon.eu>"
   :maintainer "Nicolas Hafner <shinmera@tymoon.eu>"
   :description "A utility library implementing 2x2, 3x3, 4x4, and NxN matrix functionality."

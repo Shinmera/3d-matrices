@@ -6,7 +6,7 @@
 
 (asdf:defsystem 3d-matrices-test
   :version "1.0.0"
-  :license "Artistic"
+  :license "zlib"
   :author "Nicolas Hafner <shinmera@tymoon.eu>"
   :maintainer "Nicolas Hafner <shinmera@tymoon.eu>"
   :description "Tests for the 3d-matrices system."
