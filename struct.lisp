@@ -72,7 +72,7 @@
          (aref (,marr mat) i)))
      
      (defsetf* ,mcref (mat y x &environment env) (value)
-       `(let ((#1=(gensym "I") (+ (* ,y ,,size) ,x)))
+       `(let ((#1=#.(gensym "I") (+ (* ,y ,,size) ,x)))
           #+lispworks
           (unless (< -1 i (length (,',marr 'mat)))
             (error "~d,~d is out of bounds for ~a" ,y ,x ,mat))
