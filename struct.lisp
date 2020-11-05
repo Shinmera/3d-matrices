@@ -78,10 +78,11 @@
             (error "~d,~d is out of bounds for ~a" ,y ,x ,mat))
           (setf (aref (,',marr ,mat) #1#) ,(ensure-float-param value env))))))
 
+(declaim (inline %mat2))
 (defstruct (mat2 (:conc-name NIL)
-                   (:constructor %mat2 (marr2))
-                   (:copier NIL)
-                   (:predicate mat2-p))
+                 (:constructor %mat2 (marr2))
+                 (:copier NIL)
+                 (:predicate mat2-p))
   (marr2 NIL :type (simple-array float-type (4))))
 
 (define-mat-accessor mat2 miref2 mcref2 marr2 2)
@@ -108,10 +109,11 @@
 
 (define-describe-matrix mat2)
 
+(declaim (inline %mat3))
 (defstruct (mat3 (:conc-name NIL)
-                   (:constructor %mat3 (marr3))
-                   (:copier NIL)
-                   (:predicate mat3-p))
+                 (:constructor %mat3 (marr3))
+                 (:copier NIL)
+                 (:predicate mat3-p))
   (marr3 NIL :type (simple-array float-type (9))))
 
 (define-mat-accessor mat3 miref3 mcref3 marr3 3)
@@ -138,10 +140,11 @@
 
 (define-describe-matrix mat3)
 
+(declaim (inline %mat4))
 (defstruct (mat4 (:conc-name NIL)
-                   (:constructor %mat4 (marr4))
-                   (:copier NIL)
-                   (:predicate mat4-p))
+                 (:constructor %mat4 (marr4))
+                 (:copier NIL)
+                 (:predicate mat4-p))
   (marr4 NIL :type (simple-array float-type (16))))
 
 (define-mat-accessor mat4 miref4 mcref4 marr4 4)
