@@ -763,6 +763,7 @@
 
 (declaim (ftype (function (vec3 real) mat4) mrotation))
 (define-ofun mrotation (v angle)
+  ;; https://joombig.com/sqlc/3D-Rotation-Algorithm-about-arbitrary-axis-with-CC-code-tutorials-advance
   (let* ((angle (ensure-float angle))
          (c (cos angle))
          (s (sin angle)))
@@ -782,12 +783,45 @@
                 0 0 1 0
                 0 0 0 1))
           (T
-           (let ((c (- 1 c)))
-             (with-vec3 (x y z) v
-               (mat (+ c (* x x c))       (- (* x y c) (* z s)) (+ (* x z c) (* y s)) 0
-                    (+ (* y x c) (* z s)) (+ c (* y y c))       (- (* y z c) (* x s)) 0
-                    (- (* z x c) (* y s)) (+ (* z y c) (* x s)) (+ c (* z z c))       0
-                    0                     0                     0                     1)))))))
+           (with-vec3 (x y z) v
+             (let* ((1-c (- 1 c))
+                   (u2 (expt x 2))
+                   (v2 (expt y 2))
+                   (w2 (expt z 2))
+                   (l (+ u2 v2 w2))
+                   (sqrtl (sqrt l)))
+               (mat ;;rotationMatrix[0][0] = (u2 + (v2 + w2) * cos(angle)) / L;
+                 (/ (+ u2 (* (+ v2 w2) c)) l)
+                 ;; rotationMatrix[0][1] = (u * v * (1 - cos(angle)) - w * sqrt(L) * sin(angle)) / L;
+                 (/ (- (* x y 1-c) (* z sqrtl s)) l)
+                 ;; rotationMatrix[0][2] = (u * w * (1 - cos(angle)) + v * sqrt(L) * sin(angle)) / L;
+                 (/ (+ (* x z 1-c) (* y sqrtl s)) l)
+                 ;; rotationMatrix[0][3] = 0.0;
+                 0
+                 ;; rotationMatrix[1][0] = (u * v * (1 - cos(angle)) + w * sqrt(L) * sin(angle)) / L;
+                 (/ (+ (* x y 1-c) (* z sqrtl s)) l)
+                 ;; rotationMatrix[1][1] = (v2 + (u2 + w2) * cos(angle)) / L;
+                 (/ (+ v2 (* (+ u2 w2) c)) l)
+                 ;; rotationMatrix[1][2] = (v * w * (1 - cos(angle)) - u * sqrt(L) * sin(angle)) / L;
+                 (/ (- (* y z 1-c) (* x sqrtl s)) l)
+                 ;; rotationMatrix[1][3] = 0.0;
+                 0
+                 ;; rotationMatrix[2][0] = (u * w * (1 - cos(angle)) - v * sqrt(L) * sin(angle)) / L;
+                 (/ (- (* x z 1-c) (* y sqrtl s)) l)
+                 ;; rotationMatrix[2][1] = (v * w * (1 - cos(angle)) + u * sqrt(L) * sin(angle)) / L;
+                 (/ (+ (* y z 1-c) (* x sqrtl s)) l)
+                 ;; rotationMatrix[2][2] = (w2 + (u2 + v2) * cos(angle)) / L;
+                 (/ (+ w2 (* (+ u2 v2) c)) l)
+                 ;; rotationMatrix[2][3] = 0.0;
+                 0
+                 ;; rotationMatrix[3][0] = 0.0;
+                 0
+                 ;; rotationMatrix[3][1] = 0.0;
+                 0
+                 ;; rotationMatrix[3][2] = 0.0;
+                 0
+                 ;; rotationMatrix[3][3] = 1.0;
+                 1)))))))
 
 (declaim (ftype (function (vec3 vec3 vec3) mat4) mlookat))
 (define-ofun mlookat (eye target up)
