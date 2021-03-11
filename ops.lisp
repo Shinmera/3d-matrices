@@ -763,6 +763,7 @@
 
 (declaim (ftype (function (vec3 real) mat4) mrotation))
 (define-ofun mrotation (v angle)
+  ;; https://joombig.com/sqlc/3D-Rotation-Algorithm-about-arbitrary-axis-with-CC-code-tutorials-advance
   (let* ((angle (ensure-float angle))
          (c (cos angle))
          (s (sin angle)))
@@ -782,12 +783,18 @@
                 0 0 1 0
                 0 0 0 1))
           (T
-           (let ((c (- 1 c)))
-             (with-vec3 (x y z) v
-               (mat (+ c (* x x c))       (- (* x y c) (* z s)) (+ (* x z c) (* y s)) 0
-                    (+ (* y x c) (* z s)) (+ c (* y y c))       (- (* y z c) (* x s)) 0
-                    (- (* z x c) (* y s)) (+ (* z y c) (* x s)) (+ c (* z z c))       0
-                    0                     0                     0                     1)))))))
+           (with-vec3 (x y z) v
+             (let* ((1-c (- 1 c))
+                    (u2 (expt x 2))
+                    (v2 (expt y 2))
+                    (w2 (expt z 2))
+                    (l (+ u2 v2 w2))
+                    (sqrtl (sqrt l)))
+               (mat
+                 (/ (+ u2 (* (+ v2 w2) c)) l)        (/ (- (* x y 1-c) (* z sqrtl s)) l) (/ (+ (* x z 1-c) (* y sqrtl s)) l) 0
+                 (/ (+ (* x y 1-c) (* z sqrtl s)) l) (/ (+ v2 (* (+ u2 w2) c)) l)        (/ (- (* y z 1-c) (* x sqrtl s)) l) 0
+                 (/ (- (* x z 1-c) (* y sqrtl s)) l) (/ (+ (* y z 1-c) (* x sqrtl s)) l) (/ (+ w2 (* (+ u2 v2) c)) l)        0
+                 0                                   0                                   0                                   1)))))))
 
 (declaim (ftype (function (vec3 vec3 vec3) mat4) mlookat))
 (define-ofun mlookat (eye target up)
