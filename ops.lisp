@@ -835,7 +835,12 @@
 (declaim (ftype (function (mat4 vec3) mat4) nmtranslate))
 (define-ofun nmtranslate (m v)
   (declare (inline mtranslation))
-  (nm* m (mtranslation v)))
+  (with-fast-matref (f m 4)
+    (setf (f 0 3) (+ (f 0 3) (* (f 0 0) (vx3 v)) (* (f 0 1) (vy3 v)) (* (f 0 2) (vz3 v))))
+    (setf (f 1 3) (+ (f 1 3) (* (f 1 0) (vx3 v)) (* (f 1 1) (vy3 v)) (* (f 1 2) (vz3 v))))
+    (setf (f 2 3) (+ (f 2 3) (* (f 2 0) (vx3 v)) (* (f 2 1) (vy3 v)) (* (f 2 2) (vz3 v))))
+    (setf (f 3 3) (+ (f 3 3) (* (f 3 0) (vx3 v)) (* (f 3 1) (vy3 v)) (* (f 3 2) (vz3 v))))
+    m))
 
 (declaim (ftype (function (mat4 vec3) mat4) nmscale))
 (define-ofun nmscale (m v)
