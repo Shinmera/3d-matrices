@@ -529,7 +529,7 @@
                (e 0 2) (e 1 2) (e 2 2) (e 3 2)
                (e 0 3) (e 1 3) (e 2 3) (e 3 3)))
     (matn (let ((r (matn (%cols m) (%rows m))))
-            (with-fast-matrefs ((r r (%cols m))
+            (with-fast-matrefs ((r r (%cols r))
                                 (m m (%cols m)))
               (dotimes (y (%rows r) r)
                 (dotimes (x (%cols r))

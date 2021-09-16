@@ -214,6 +214,8 @@
   (is m= (meye 5) (mtranspose (meye 5)))
   (is m= (mat4 1) (mtranspose (mat4 1)))
   (is m= (mat 1 4 7 2 5 8 3 6 9) (mtranspose (mat 1 2 3 4 5 6 7 8 9)))
+  (is m= (matn 3 2 '(1 4 2 5 3 6)) (mtranspose (matn 2 3 '(1 2 3 4 5 6))))
+  (is m= (matn 3 4 '(1 4 7 10 2 5 8 11 3 6 9 12)) (mtranspose (matn 4 3 '(1 2 3 4 5 6 7 8 9 10 11 12))))
   (is ~= 10 (mtrace (mat 1 1 1 1 3 2 2 2 4 4 3 3 5 5 5 4)))
   (is ~= 15 (mtrace (mat 1 1 1 1 1 3 2 2 2 2 4 4 3 3 3 5 5 5 4 4 6 6 6 6 5)))
   (is = (mdet (mat 1 2 4 5)) (mminor (mat 1 2 3 4 5 6 7 8 9) 0 0))
