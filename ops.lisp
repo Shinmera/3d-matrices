@@ -279,12 +279,17 @@
 (define-nmatop nm- -)
 
 (defmacro %2mat*-expansion (a b)
-  (let ((m (gensym "M")))
+  (let ((m (gensym "M"))
+        (mc (gensym "MC")))
     (flet ((unroll (size) (loop for i from 0 below size collect `(* (e ,i) ,b)))
-           (unrollm (size) (loop for i from 0 below size
-                                 append (loop for j from 0 below size
-                                              collect `(+ ,@(loop for k from 0 below size
-                                                                  collect `(* (e ,i ,k) (f ,k ,j))))))))
+           #+nil(unrollm (size) (loop for i from 0 below size
+                                      append (loop for j from 0 below size
+                                                   collect `(+ ,@(loop for k from 0 below size
+                                                                       collect `(* (e ,i ,k) (f ,k ,j)))))))
+           (unrollnm (size1 size2) (loop for i from 0 below size1
+                                         append (loop for j from 0 below size2
+                                                      collect `(+ ,@(loop for k from 0 below size1
+                                                                          collect `(* (e ,i ,k) (f ,k ,j))))))))
       `(let ((,a (if (vec-p ,a) ,b ,a))
              (,b (if (vec-p ,a) ,a ,b)))
          (with-fast-matcase (e a)
@@ -292,38 +297,71 @@
                    (,*float-type* (mat ,@(unroll 4)))
                    (vec2 (vec2 (+ (* (vx2 ,b) (e 0 0)) (* (vy2 ,b) (e 0 1)))
                                (+ (* (vx2 ,b) (e 1 0)) (* (vy2 ,b) (e 1 1)))))
-                   (mat2 (with-fast-matref (f b 2) (mat ,@(unrollm 2))))))
+                   (mat2 (with-fast-matref (f b 2) (mat ,@(unrollnm 2 2))))
+                   (matn
+                                        ;cols of first = rows of second
+                    (unless (= (mcols ,a) (mrows ,b))
+                      (error "Matrices are of incompatible size:~%~a~%~a"
+                             (write-matrix a NIL) (write-matrix b NIL)))
+                    (let ((,mc (mcols b)))
+                      (if (< 5 ,mc)
+                          (error "to big of a col count")
+                          (ecase ,mc
+                            (3 (with-fast-matref (f b ,mc) (matn 2 ,mc (list ,@(unrollnm 2 3)))))
+                            (4 (with-fast-matref (f b ,mc) (matn 2 ,mc (list ,@(unrollnm 2 4)))))
+                            (5 (with-fast-matref (f b ,mc) (matn 2 ,mc (list ,@(unrollnm 2 5)))))
+                            ))))))
            (mat3 (etypecase ,b
                    (,*float-type* (mat ,@(unroll 9)))
                    (vec3 (vec3 (+ (* (vx3 ,b) (e 0 0)) (* (vy3 ,b) (e 0 1)) (* (vz3 ,b) (e 0 2)))
                                (+ (* (vx3 ,b) (e 1 0)) (* (vy3 ,b) (e 1 1)) (* (vz3 ,b) (e 1 2)))
                                (+ (* (vx3 ,b) (e 2 0)) (* (vy3 ,b) (e 2 1)) (* (vz3 ,b) (e 2 2)))))
-                   (mat3 (with-fast-matref (f b 3) (mat ,@(unrollm 3))))))
+                   (mat3 (with-fast-matref (f b 3) (mat ,@(unrollnm 3 3))))
+                   (matn
+                                        ;cols of first = rows of second
+                    (unless (= (mcols ,a) (mrows ,b))
+                      (error "Matrices are of incompatible size:~%~a~%~a"
+                             (write-matrix a NIL) (write-matrix b NIL)))
+                    (let ((,mc (mcols b)))
+                      (ecase ,mc
+                        (4 (with-fast-matref (f b ,mc) (matn 3 ,mc (list ,@(unrollnm 3 4)))))
+                        (5 (with-fast-matref (f b ,mc) (matn 3 ,mc (list ,@(unrollnm 3 5)))))
+                        )))
+                   ))
            (mat4 (etypecase ,b
                    (,*float-type* (mat ,@(unroll 16)))
                    (vec4 (vec4 (+ (* (vx4 ,b) (e 0 0)) (* (vy4 ,b) (e 0 1)) (* (vz4 ,b) (e 0 2)) (* (vw4 ,b) (e 0 3)))
                                (+ (* (vx4 ,b) (e 1 0)) (* (vy4 ,b) (e 1 1)) (* (vz4 ,b) (e 1 2)) (* (vw4 ,b) (e 1 3)))
                                (+ (* (vx4 ,b) (e 2 0)) (* (vy4 ,b) (e 2 1)) (* (vz4 ,b) (e 2 2)) (* (vw4 ,b) (e 2 3)))
                                (+ (* (vx4 ,b) (e 3 0)) (* (vy4 ,b) (e 3 1)) (* (vz4 ,b) (e 3 2)) (* (vw4 ,b) (e 3 3)))))
-                   (mat4 (with-fast-matref (f b 4) (mat ,@(unrollm 4))))))
+                   (mat4 (with-fast-matref (f b 4) (mat ,@(unrollnm 4 4))))
+                   (matn
+                                        ;cols of first = rows of second
+                    (unless (= (mcols ,a) (mrows ,b))
+                      (error "Matrices are of incompatible size:~%~a~%~a"
+                             (write-matrix a NIL) (write-matrix b NIL)))
+                    (let ((,mc (mcols b)))
+                      (ecase ,mc
+                        (5 (with-fast-matref (f b ,mc) (matn 4 ,mc (list ,@(unrollnm 4 5)))))
+                        )))))
            (matn (etypecase ,b
                    (,*float-type*
                     (let ((,m (matn (%rows ,a) (%cols ,a))))
                       (map-into (marrn ,m) (lambda (,m) (* (the ,*float-type* ,m)
-                                                            (the ,*float-type* ,b))) (marrn ,a))
+                                                           (the ,*float-type* ,b))) (marrn ,a))
                       ,m))
-                   (matn
-                    (unless (= (%cols ,a) (%rows ,b))
+                   ((or mat2 mat3 mat4 matn)
+                    (unless (= (mcols ,a) (mrows ,b))
                       (error "Matrices are of incompatible size:~%~a~%~a"
                              (write-matrix a NIL) (write-matrix b NIL)))
-                    (let ((,m (matn (%rows ,a) (%cols ,b))))
-                      (with-fast-matrefs ((e ,a (%cols ,a))
-                                          (f ,b (%cols ,b))
-                                          (g ,m (%cols ,b)))
-                        (dotimes (i (%rows ,a) ,m)
+                    (let ((,m (matn (mrows ,a) (mcols ,b))))
+                      (with-fast-matrefs ((e ,a (mcols ,a))
+                                          (f ,b (mcols ,b))
+                                          (g ,m (mcols ,b)))
+                        (dotimes (i (mrows ,a) ,m)
                           (loop for sum of-type #.*float-type* = ,(ensure-float 0)
-                                for j from 0 below (%cols ,b)
-                                do (loop for k from 0 below (%cols ,a)
+                                for j from 0 below (mcols ,b)
+                                do (loop for k from 0 below (mcols ,a)
                                          do (setf sum (+ (* (e i k) (f k j)) sum)))
                                    (setf (g i j) sum)))))))))))))
 
