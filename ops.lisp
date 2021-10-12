@@ -285,8 +285,7 @@
            (unroll-axb (rows-a cols-a cols-b) (loop for i from 0 below rows-a
                                          append (loop for j from 0 below cols-b
                                                       collect `(+ ,@(loop for k from 0 below cols-a
-                                                                          collect `(* (e ,i ,k) (f ,k ,j)))))))
-           )
+                                                                          collect `(* (e ,i ,k) (f ,k ,j))))))))
       `(let ((,a (if (vec-p ,a) ,b ,a))
              (,b (if (vec-p ,a) ,a ,b)))
          (flet ((matmul (a b)
@@ -318,8 +317,7 @@
                               (1 (with-fast-matref (f b ,ncols) (matn 2 ,ncols (list ,@(unroll-axb 2 2 1)))))
                               (3 (with-fast-matref (f b ,ncols) (matn 2 ,ncols (list ,@(unroll-axb 2 2 3)))))
                               (4 (with-fast-matref (f b ,ncols) (matn 2 ,ncols (list ,@(unroll-axb 2 2 4)))))
-                              (5 (with-fast-matref (f b ,ncols) (matn 2 ,ncols (list ,@(unroll-axb 2 2 5)))))
-                              ))))))
+                              (5 (with-fast-matref (f b ,ncols) (matn 2 ,ncols (list ,@(unroll-axb 2 2 5)))))))))))
              (mat3 (etypecase ,b
                      (,*float-type* (mat ,@(unroll 9)))
                      (vec3 (vec3 (+ (* (vx3 ,b) (e 0 0)) (* (vy3 ,b) (e 0 1)) (* (vz3 ,b) (e 0 2)))
@@ -337,9 +335,7 @@
                            (1 (with-fast-matref (f b ,ncols) (matn 3 ,ncols (list ,@(unroll-axb 3 3 1)))))
                            (2 (with-fast-matref (f b ,ncols) (matn 3 ,ncols (list ,@(unroll-axb 3 3 2)))))
                            (4 (with-fast-matref (f b ,ncols) (matn 3 ,ncols (list ,@(unroll-axb 3 3 4)))))
-                           (5 (with-fast-matref (f b ,ncols) (matn 3 ,ncols (list ,@(unroll-axb 3 3 5)))))
-                           ))))
-                     ))
+                           (5 (with-fast-matref (f b ,ncols) (matn 3 ,ncols (list ,@(unroll-axb 3 3 5)))))))))))
              (mat4 (etypecase ,b
                      (,*float-type* (mat ,@(unroll 16)))
                      (vec4 (vec4 (+ (* (vx4 ,b) (e 0 0)) (* (vy4 ,b) (e 0 1)) (* (vz4 ,b) (e 0 2)) (* (vw4 ,b) (e 0 3)))
@@ -358,8 +354,7 @@
                            (1 (with-fast-matref (f b ,ncols) (matn 4 ,ncols (list ,@(unroll-axb 4 4 1)))))
                            (2 (with-fast-matref (f b ,ncols) (matn 4 ,ncols (list ,@(unroll-axb 4 4 2)))))
                            (3 (with-fast-matref (f b ,ncols) (matn 4 ,ncols (list ,@(unroll-axb 4 4 3)))))
-                           (5 (with-fast-matref (f b ,ncols) (matn 4 ,ncols (list ,@(unroll-axb 4 4 5)))))
-                           ))))))
+                           (5 (with-fast-matref (f b ,ncols) (matn 4 ,ncols (list ,@(unroll-axb 4 4 5)))))))))))
              (matn (etypecase ,b
                      (,*float-type*
                       (let ((,m (matn (%rows ,a) (%cols ,a))))
