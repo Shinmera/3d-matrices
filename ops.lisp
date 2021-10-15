@@ -279,53 +279,93 @@
 (define-nmatop nm- -)
 
 (defmacro %2mat*-expansion (a b)
-  (let ((m (gensym "M")))
+  (let ((m (gensym "M"))
+        (ncols (gensym "NCOLS")))
     (flet ((unroll (size) (loop for i from 0 below size collect `(* (e ,i) ,b)))
-           (unrollm (size) (loop for i from 0 below size
-                                 append (loop for j from 0 below size
-                                              collect `(+ ,@(loop for k from 0 below size
-                                                                  collect `(* (e ,i ,k) (f ,k ,j))))))))
+           (unroll-axb (rows-a cols-a cols-b) (loop for i from 0 below rows-a
+                                         append (loop for j from 0 below cols-b
+                                                      collect `(+ ,@(loop for k from 0 below cols-a
+                                                                          collect `(* (e ,i ,k) (f ,k ,j))))))))
       `(let ((,a (if (vec-p ,a) ,b ,a))
              (,b (if (vec-p ,a) ,a ,b)))
-         (with-fast-matcase (e a)
-           (mat2 (etypecase ,b
-                   (,*float-type* (mat ,@(unroll 4)))
-                   (vec2 (vec2 (+ (* (vx2 ,b) (e 0 0)) (* (vy2 ,b) (e 0 1)))
-                               (+ (* (vx2 ,b) (e 1 0)) (* (vy2 ,b) (e 1 1)))))
-                   (mat2 (with-fast-matref (f b 2) (mat ,@(unrollm 2))))))
-           (mat3 (etypecase ,b
-                   (,*float-type* (mat ,@(unroll 9)))
-                   (vec3 (vec3 (+ (* (vx3 ,b) (e 0 0)) (* (vy3 ,b) (e 0 1)) (* (vz3 ,b) (e 0 2)))
-                               (+ (* (vx3 ,b) (e 1 0)) (* (vy3 ,b) (e 1 1)) (* (vz3 ,b) (e 1 2)))
-                               (+ (* (vx3 ,b) (e 2 0)) (* (vy3 ,b) (e 2 1)) (* (vz3 ,b) (e 2 2)))))
-                   (mat3 (with-fast-matref (f b 3) (mat ,@(unrollm 3))))))
-           (mat4 (etypecase ,b
-                   (,*float-type* (mat ,@(unroll 16)))
-                   (vec4 (vec4 (+ (* (vx4 ,b) (e 0 0)) (* (vy4 ,b) (e 0 1)) (* (vz4 ,b) (e 0 2)) (* (vw4 ,b) (e 0 3)))
-                               (+ (* (vx4 ,b) (e 1 0)) (* (vy4 ,b) (e 1 1)) (* (vz4 ,b) (e 1 2)) (* (vw4 ,b) (e 1 3)))
-                               (+ (* (vx4 ,b) (e 2 0)) (* (vy4 ,b) (e 2 1)) (* (vz4 ,b) (e 2 2)) (* (vw4 ,b) (e 2 3)))
-                               (+ (* (vx4 ,b) (e 3 0)) (* (vy4 ,b) (e 3 1)) (* (vz4 ,b) (e 3 2)) (* (vw4 ,b) (e 3 3)))))
-                   (mat4 (with-fast-matref (f b 4) (mat ,@(unrollm 4))))))
-           (matn (etypecase ,b
-                   (,*float-type*
-                    (let ((,m (matn (%rows ,a) (%cols ,a))))
-                      (map-into (marrn ,m) (lambda (,m) (* (the ,*float-type* ,m)
-                                                            (the ,*float-type* ,b))) (marrn ,a))
-                      ,m))
-                   (matn
-                    (unless (= (%cols ,a) (%rows ,b))
-                      (error "Matrices are of incompatible size:~%~a~%~a"
-                             (write-matrix a NIL) (write-matrix b NIL)))
-                    (let ((,m (matn (%rows ,a) (%cols ,b))))
-                      (with-fast-matrefs ((e ,a (%cols ,a))
-                                          (f ,b (%cols ,b))
-                                          (g ,m (%cols ,b)))
-                        (dotimes (i (%rows ,a) ,m)
+         (flet ((matmul (a b)
+                  (let ((m (matn (mrows a) (mcols b))))
+                      (with-fast-matrefs ((e a (mcols a))
+                                          (f b (mcols b))
+                                          (g m (mcols b)))
+                        (dotimes (i (mrows a) m)
                           (loop for sum of-type #.*float-type* = ,(ensure-float 0)
-                                for j from 0 below (%cols ,b)
-                                do (loop for k from 0 below (%cols ,a)
+                                for j from 0 below (mcols b)
+                                do (loop for k from 0 below (mcols a)
                                          do (setf sum (+ (* (e i k) (f k j)) sum)))
-                                   (setf (g i j) sum)))))))))))))
+                                   (setf (g i j) sum))))
+                    m)))
+           (with-fast-matcase (e a)
+             (mat2 (etypecase ,b
+                     (,*float-type* (mat ,@(unroll 4)))
+                     (vec2 (vec2 (+ (* (vx2 ,b) (e 0 0)) (* (vy2 ,b) (e 0 1)))
+                                 (+ (* (vx2 ,b) (e 1 0)) (* (vy2 ,b) (e 1 1)))))
+                     (mat2 (with-fast-matref (f b 2) (mat ,@(unroll-axb 2 2 2))))
+                     (matn
+                      (unless (= (mcols ,a) (mrows ,b))
+                        (error "Matrices are of incompatible size:~%~a~%~a"
+                               (write-matrix a NIL) (write-matrix b NIL)))
+                      (let ((,ncols (mcols b)))
+                        (if (< 5 ,ncols)
+                            (matmul ,a ,b)
+                            (ecase ,ncols
+                              (1 (with-fast-matref (f b ,ncols) (matn 2 ,ncols (list ,@(unroll-axb 2 2 1)))))
+                              (3 (with-fast-matref (f b ,ncols) (matn 2 ,ncols (list ,@(unroll-axb 2 2 3)))))
+                              (4 (with-fast-matref (f b ,ncols) (matn 2 ,ncols (list ,@(unroll-axb 2 2 4)))))
+                              (5 (with-fast-matref (f b ,ncols) (matn 2 ,ncols (list ,@(unroll-axb 2 2 5)))))))))))
+             (mat3 (etypecase ,b
+                     (,*float-type* (mat ,@(unroll 9)))
+                     (vec3 (vec3 (+ (* (vx3 ,b) (e 0 0)) (* (vy3 ,b) (e 0 1)) (* (vz3 ,b) (e 0 2)))
+                                 (+ (* (vx3 ,b) (e 1 0)) (* (vy3 ,b) (e 1 1)) (* (vz3 ,b) (e 1 2)))
+                                 (+ (* (vx3 ,b) (e 2 0)) (* (vy3 ,b) (e 2 1)) (* (vz3 ,b) (e 2 2)))))
+                     (mat3 (with-fast-matref (f b 3) (mat ,@(unroll-axb 3 3 3))))
+                     (matn
+                      (unless (= (mcols ,a) (mrows ,b))
+                        (error "Matrices are of incompatible size:~%~a~%~a"
+                               (write-matrix a NIL) (write-matrix b NIL)))
+                      (let ((,ncols (mcols b)))
+                        (if (< 5 ,ncols)
+                            (matmul ,a ,b)
+                         (ecase ,ncols
+                           (1 (with-fast-matref (f b ,ncols) (matn 3 ,ncols (list ,@(unroll-axb 3 3 1)))))
+                           (2 (with-fast-matref (f b ,ncols) (matn 3 ,ncols (list ,@(unroll-axb 3 3 2)))))
+                           (4 (with-fast-matref (f b ,ncols) (matn 3 ,ncols (list ,@(unroll-axb 3 3 4)))))
+                           (5 (with-fast-matref (f b ,ncols) (matn 3 ,ncols (list ,@(unroll-axb 3 3 5)))))))))))
+             (mat4 (etypecase ,b
+                     (,*float-type* (mat ,@(unroll 16)))
+                     (vec4 (vec4 (+ (* (vx4 ,b) (e 0 0)) (* (vy4 ,b) (e 0 1)) (* (vz4 ,b) (e 0 2)) (* (vw4 ,b) (e 0 3)))
+                                 (+ (* (vx4 ,b) (e 1 0)) (* (vy4 ,b) (e 1 1)) (* (vz4 ,b) (e 1 2)) (* (vw4 ,b) (e 1 3)))
+                                 (+ (* (vx4 ,b) (e 2 0)) (* (vy4 ,b) (e 2 1)) (* (vz4 ,b) (e 2 2)) (* (vw4 ,b) (e 2 3)))
+                                 (+ (* (vx4 ,b) (e 3 0)) (* (vy4 ,b) (e 3 1)) (* (vz4 ,b) (e 3 2)) (* (vw4 ,b) (e 3 3)))))
+                     (mat4 (with-fast-matref (f b 4) (mat ,@(unroll-axb 4 4 4))))
+                     (matn
+                      (unless (= (mcols ,a) (mrows ,b))
+                        (error "Matrices are of incompatible size:~%~a~%~a"
+                               (write-matrix a NIL) (write-matrix b NIL)))
+                      (let ((,ncols (mcols b)))
+                        (if (< 5 ,ncols)
+                            (matmul ,a ,b)
+                         (ecase ,ncols
+                           (1 (with-fast-matref (f b ,ncols) (matn 4 ,ncols (list ,@(unroll-axb 4 4 1)))))
+                           (2 (with-fast-matref (f b ,ncols) (matn 4 ,ncols (list ,@(unroll-axb 4 4 2)))))
+                           (3 (with-fast-matref (f b ,ncols) (matn 4 ,ncols (list ,@(unroll-axb 4 4 3)))))
+                           (5 (with-fast-matref (f b ,ncols) (matn 4 ,ncols (list ,@(unroll-axb 4 4 5)))))))))))
+             (matn (etypecase ,b
+                     (,*float-type*
+                      (let ((,m (matn (%rows ,a) (%cols ,a))))
+                        (map-into (marrn ,m) (lambda (,m) (* (the ,*float-type* ,m)
+                                                             (the ,*float-type* ,b))) (marrn ,a))
+                        ,m))
+                     ((or mat2 mat3 mat4 matn)
+                      (unless (= (mcols ,a) (mrows ,b))
+                        (error "Matrices are of incompatible size:~%~a~%~a"
+                               (write-matrix a NIL) (write-matrix b NIL)))
+                      (matmul ,a ,b))))))))))
 
 (defmacro %2nmat*-expansion (a b &optional (u a))
   (let ((m (gensym "M")))
