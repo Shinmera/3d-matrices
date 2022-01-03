@@ -33,6 +33,11 @@
 (defun ~= (a b)
   (< (abs (- a b)) *eps*))
 
+(declaim (ftype (function (float-type float-type) boolean) ~/=))
+(declaim (inline ~/=))
+(defun ~/= (a b)
+  (<= *eps* (abs (- a b))))
+
 (defmacro with-floats (&environment env bindings &body body)
   `(let ,(loop for (var val) in bindings
                collect `(,var (the ,*float-type* ,(ensure-float-param val env))))
