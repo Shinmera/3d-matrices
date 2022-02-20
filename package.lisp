@@ -21,6 +21,7 @@
    #:with-fast-matref
    #:with-fast-matrefs
    #:with-fast-matcase
+   #:msetf
    #:meye
    #:mrand
    #:muniform

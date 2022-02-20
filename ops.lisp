@@ -63,6 +63,16 @@
        ,@(when matn
            `((matn ,@matn))))))
 
+(defmacro msetf (mat &rest els)
+  (let ((m (gensym "MAT"))
+        (arr (gensym "ARR")))
+    `(let* ((,m ,mat)
+            (,arr (marr ,m)))
+       ,@(loop for el in els
+               for i from 0
+               collect `(setf (aref ,arr ,i) (ensure-float ,el)))
+       ,m)))
+
 (declaim (ftype (function (mat-dim) mat) meye))
 (define-ofun meye (n)
   (case n
