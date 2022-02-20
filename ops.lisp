@@ -68,9 +68,11 @@
         (arr (gensym "ARR")))
     `(let* ((,m ,mat)
             (,arr (marr ,m)))
-       ,@(loop for el in els
-               for i from 0
-               collect `(setf (aref ,arr ,i) (ensure-float ,el)))
+       (psetf
+        ,@(loop for el in els
+                for i from 0
+                collect `(aref ,arr ,i)
+                collect `(ensure-float ,el)))
        ,m)))
 
 (declaim (ftype (function (mat-dim) mat) meye))
@@ -584,6 +586,21 @@
               (dotimes (y (%rows r) r)
                 (dotimes (x (%cols r))
                   (setf (r y x) (m x y)))))))))
+
+(declaim (ftype (function (mat) mat) mtranspose))
+(define-ofun nmtranspose (m)
+  (with-fast-matcase (e m)
+    (mat2 (rotatef (e 0 1) (e 1 0)))
+    (mat3 (rotatef (e 0 1) (e 1 0))
+          (rotatef (e 0 2) (e 2 0))
+          (rotatef (e 1 2) (e 2 1)))
+    (mat4 (rotatef (e 0 1) (e 1 0))
+          (rotatef (e 0 2) (e 2 0))
+          (rotatef (e 0 3) (e 3 0))
+          (rotatef (e 1 2) (e 2 1))
+          (rotatef (e 1 3) (e 3 1))
+          (rotatef (e 2 3) (e 3 2))))
+  m)
 
 (declaim (ftype (function (mat) float-type) mtrace))
 (define-ofun mtrace (m)

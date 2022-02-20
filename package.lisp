@@ -48,6 +48,7 @@
    #:mdet
    #:minv
    #:mtranspose
+   #:nmtranspose
    #:mtrace
    #:mminor
    #:mcofactor
