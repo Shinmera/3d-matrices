@@ -828,40 +828,51 @@
        0 0 (vz3 v) 0
        0 0 0       1))
 
-(declaim (ftype (function (vec3 real) mat4) mrotation))
-(define-ofun mrotation (v angle)
+(declaim (inline %mrotation))
+(defun %mrotation (arr v angle)
+  (declare (type (simple-array float-type (16)) arr))
+  (declare (optimize speed (safety 0)))
   ;; https://joombig.com/sqlc/3D-Rotation-Algorithm-about-arbitrary-axis-with-CC-code-tutorials-advance
   (let* ((angle (ensure-float angle))
          (c (cos angle))
          (s (sin angle)))
-    (cond ((v= +vx+ v)
-           (mat 1 0 0 0
-                0 c (- s) 0
-                0 s c 0
-                0 0 0 1))
-          ((v= +vy+ v)
-           (mat c 0 s 0
-                0 1 0 0
-                (- s) 0 c 0
-                0 0 0 1))
-          ((v= +vz+ v)
-           (mat c (- s) 0 0
-                s c 0 0
-                0 0 1 0
-                0 0 0 1))
-          (T
-           (with-vec3 (x y z) v
-             (let* ((1-c (- 1 c))
-                    (u2 (expt x 2))
-                    (v2 (expt y 2))
-                    (w2 (expt z 2))
-                    (l (+ u2 v2 w2))
-                    (sqrtl (sqrt l)))
-               (mat
-                 (/ (+ u2 (* (+ v2 w2) c)) l)        (/ (- (* x y 1-c) (* z sqrtl s)) l) (/ (+ (* x z 1-c) (* y sqrtl s)) l) 0
-                 (/ (+ (* x y 1-c) (* z sqrtl s)) l) (/ (+ v2 (* (+ u2 w2) c)) l)        (/ (- (* y z 1-c) (* x sqrtl s)) l) 0
-                 (/ (- (* x z 1-c) (* y sqrtl s)) l) (/ (+ (* y z 1-c) (* x sqrtl s)) l) (/ (+ w2 (* (+ u2 v2) c)) l)        0
-                 0                                   0                                   0                                   1)))))))
+    (macrolet ((%mat (&rest els)
+                 `(progn ,@(loop for el in els
+                                 for i from 0
+                                 collect `(setf (aref arr ,i) (ensure-float ,el))))))
+      (cond ((v= +vx+ v)
+             (%mat 1 0 0 0
+                   0 c (- s) 0
+                   0 s c 0
+                   0 0 0 1))
+            ((v= +vy+ v)
+             (%mat c 0 s 0
+                   0 1 0 0
+                   (- s) 0 c 0
+                   0 0 0 1))
+            ((v= +vz+ v)
+             (%mat c (- s) 0 0
+                   s c 0 0
+                   0 0 1 0
+                   0 0 0 1))
+            (T
+             (with-vec3 (x y z) v
+               (let* ((1-c (- 1 c))
+                      (u2 (expt x 2))
+                      (v2 (expt y 2))
+                      (w2 (expt z 2))
+                      (l (+ u2 v2 w2))
+                      (sqrtl (sqrt l)))
+                 (%mat (/ (+ u2 (* (+ v2 w2) c)) l)        (/ (- (* x y 1-c) (* z sqrtl s)) l) (/ (+ (* x z 1-c) (* y sqrtl s)) l) 0
+                       (/ (+ (* x y 1-c) (* z sqrtl s)) l) (/ (+ v2 (* (+ u2 w2) c)) l)        (/ (- (* y z 1-c) (* x sqrtl s)) l) 0
+                       (/ (- (* x z 1-c) (* y sqrtl s)) l) (/ (+ (* y z 1-c) (* x sqrtl s)) l) (/ (+ w2 (* (+ u2 v2) c)) l)        0
+                       0                                   0                                   0                                   1))))))))
+
+(declaim (ftype (function (vec3 real) mat4) mrotation))
+(define-ofun mrotation (v angle)
+  (let ((mat (mat4)))
+    (%mrotation (marr4 mat) v angle)
+    mat))
 
 (declaim (ftype (function (vec3 vec3 vec3) mat4) mlookat))
 (define-ofun mlookat (eye target up)
@@ -928,7 +939,12 @@
 (declaim (ftype (function (mat4 vec3 real) mat4) nmrotate))
 (define-ofun nmrotate (m v angle)
   (declare (inline mrotation))
-  (nm* m (mrotation v angle)))
+  (let ((arr (make-array 16 :element-type '#.*float-type*)))
+    (declare (dynamic-extent arr))
+    (%mrotation arr v angle)
+    (let ((mat (%mat4 arr)))
+      (declare (dynamic-extent mat))
+      (values (nm* m mat)))))
 
 (declaim (ftype (function (mat4 vec3 vec3 vec3) mat4) nmlookat))
 (define-ofun nmlookat (m eye target up)
