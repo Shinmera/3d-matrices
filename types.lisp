@@ -57,21 +57,23 @@
 (macrolet ((emit ()
              `(define-type-dispatch mcopy (a)
                 ,@(loop for instance in (instances 'mat-type)
-                        collect `((,(lisp-type instance)) ,(lisp-type instance) (,(compose-name #\- (lisp-type instance) 'copy) a))))))
+                        for (<s> <t>) = (template-arguments instance)
+                        collect `((,(lisp-type instance)) ,(lisp-type instance) (,(constructor instance) (copy-seq (,(place instance 0) a))))))))
   (emit))
 
 (macrolet ((emit ()
              `(define-type-dispatch mzero (a)
                 ,@(loop for instance in (instances 'mat-type)
-                        collect `((,(lisp-type instance)) ,(lisp-type instance) (,(constructor instance) ,@(loop for place in (places instance)
-                                                                                                                 collect `(,(third place) 0))))))))
+                        for (<s> <t>) = (template-arguments instance)
+                        collect `((,(lisp-type instance)) ,(lisp-type instance)
+                                  (,(constructor instance) ,(if (eql 'n <s>)
+                                                                `(make-array (length (,(place instance 0) a)) :element-type ',<t> :initial-element (,<t> 0))
+                                                                `(make-array ,(* <s> <s>) :element-type ',<t> :initial-element (,<t> 0)))))))))
   (emit))
-
-
 
 ;; [x] matX
 ;; [x] marrX
-;; [x] matX-copy
+;; [ ] matX-copy (autogen is not useful as it does not deep-copy the array)
 ;; [x] matX-p
 ;; [ ] mirefX
 ;; [ ] mcrefX
@@ -84,7 +86,7 @@
 ;; [ ] mrows
 ;; [ ] mat
 ;; [ ] matf
-;; [ ] mcopy
+;; [x] mcopy
 ;; [ ] write-matrix
 ;; [ ] with-matrix
 ;; [ ] with-fast-matref
