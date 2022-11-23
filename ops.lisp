@@ -6,6 +6,10 @@
 
 (in-package #:org.shirakumo.fraf.matrix)
 
+;; [ ] mcopy
+;; [ ] mzero
+;; [ ] miref
+;; [ ] mcref
 ;; [ ] msetf
 ;; [ ] meye
 ;; [ ] mrand
