@@ -18,17 +18,14 @@
         (,(constructor type) arr ,@(when (eql 'n <s>) `(,(place-form type 'cols 'm)
                                                         ,(place-form type 'rows 'm))))))))
 
-(define-template zero <s> <t> (m)
+(define-template zero <s> <t> (x)
   (let ((type (type-instance 'mat-type <s> <t>)))
-    `((declare (type ,(lisp-type type) m)
+    `((declare (type ,(lisp-type type) x)
                (return-type ,(lisp-type type))
-               inline
-               (ignorable m))
-      (let ((arr (make-array ,(attribute type :len) :element-type ',<t>)))
-        (do-times (i 0 ,(attribute type :len))
-          (setf (aref arr i) (load-time-value (,<t> 0))))
-        (,(constructor type) arr ,@(when (eql 'n <s>) `(,(place-form type 'cols 'm)
-                                                        ,(place-form type 'rows 'm))))))))
+               inline)
+      (let ((xa ,(place-form type 'arr 'x)))
+        (do-times (i 0 ,(attribute type :len) x)
+          (setf (aref xa i) ,(funcall <t> 0)))))))
 
 (define-template aref <s> <t> (m i)
   (let ((type (type-instance 'mat-type <s> <t>)))
@@ -56,7 +53,7 @@
       (let ((ma ,(place-form type 'arr 'm))
             (xa ,(place-form type 'arr 'x))
             (s (,<t> s)))
-        (do-times (i 0 ,(attribute type :len) x)
+        (do-times (i 0 ,(attribute type :len) 1 x)
           (setf (aref xa i) (,<op> (aref ma i) s)))))))
 
 (define-template 2matop <op> <s> <t> (x m n)
@@ -67,7 +64,7 @@
       (let ((ma ,(place-form type 'arr 'm))
             (na ,(place-form type 'arr 'n))
             (xa ,(place-form type 'arr 'x)))
-        (do-times (i 0 ,(attribute type :len) x)
+        (do-times (i 0 ,(attribute type :len) 1 x)
           (setf (aref xa i) (,<op> (aref ma i) (aref na i))))))))
 
 (define-template 1matop <op> <s> <t> (x m)
@@ -77,7 +74,7 @@
                inline)
       (let ((ma ,(place-form type 'arr 'm))
             (xa ,(place-form type 'arr 'x)))
-        (do-times (i 0 ,(attribute type :len) x)
+        (do-times (i 0 ,(attribute type :len) 1 x)
           (setf (aref xa i) (,<op> (aref ma i))))))))
 
 (define-template 2matreduce <red> <comb> rtype <s> <t> (m n)
@@ -92,7 +89,7 @@
       (let* ((ma ,(place-form type 'arr 'm))
              (na ,(place-form type 'arr 'n))
              (r (,<comb> (aref ma 0) (aref na 0))))
-        (do-times (i 1 ,(attribute type :len) r)
+        (do-times (i 1 ,(attribute type :len) 1 r)
           (setf r (,<red> r (,<comb> (aref ma i) (aref na i)))))))))
 
 (define-template 1matreduce <red> <comb> rtype <s> <t> (m)
@@ -106,7 +103,7 @@
                inline)
       (let* ((ma ,(place-form type 'arr 'm))
              (r (,<comb> (aref ma 0))))
-        (do-times (i 1 ,(attribute type :len) r)
+        (do-times (i 1 ,(attribute type :len) 1 r)
           (setf r (,<red> r (,<comb> (aref ma i)))))))))
 
 (define-template smatreduce <red> <comb> <st> rtype <s> <t> (m s)
@@ -126,16 +123,25 @@
           (setf r (,<red> r (,<comb> (aref ma i) s))))
         (,(if (member rtype '(f32 f64 i32 u32)) rtype 'progn) r)))))
 
+(define-template eye <s> <t> (x)
+  (let* ((type (type-instance 'mat-type <s> <t>))
+         (cols (attribute type :cols 'x)))
+    `((declare (type ,(lisp-type type) x)
+               (return-type ,(lisp-type type))
+               inline)
+      (let* ((xa ,(place-form type 'arr 'x)))
+        (do-times (i 0 ,(attribute type :len 'x))
+          (setf (aref xa i) (,<t> 0)))
+        (do-times (i 0 ,(attribute type :len 'x) ,(if (integerp cols) (1+ cols) `(1+ ,cols)) x)
+          (setf (aref xa i) (,<t> 1)))))))
+
 ;; [x] mcopy
 ;; [x] mzero
 ;; [x] miref
 ;; [x] mcref
-;; [ ] msetf
-;; [ ] meye
+;; [x] msetf
+;; [x] meye
 ;; [ ] mrand
-;; [ ] muniform
-;; [ ] mcol
-;; [ ] mrow
 ;; [x] m= m~= m/= m< m> m<= m>=
 ;; [x] m+ m-
 ;; [ ] m* m/
@@ -163,14 +169,12 @@
 ;; [ ] m2norm
 ;; [ ] mqr
 ;; [ ] meigen
-;; [ ] mswap-row
-;; [ ] mswap-col
+;; [ ] mcol
+;; [ ] mrow
 ;; [ ] mdiag
 ;; [ ] mblock
-;; [ ] mtop
-;; [ ] mbottom
-;; [ ] mleft
-;; [ ] mright
+;; [ ] mswap-row
+;; [ ] mswap-col
 
 (do-mat-combinations define-copy)
 (do-mat-combinations define-zero)
@@ -182,3 +186,4 @@
 (do-mat-combinations define-smatreduce (and) (= ~= /= < <= >= >) (<t> real) boolean)
 (do-mat-combinations define-2matreduce (or) (/=) boolean)
 (do-mat-combinations define-smatreduce (or) (/=) (<t> real) boolean)
+(do-mat-combinations define-eye)
