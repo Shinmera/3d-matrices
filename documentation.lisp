@@ -172,7 +172,10 @@ A MATOP like this always returns the modified, first matrix.")
 If the other operand is a real, the matrix is multiplied with the real element-wise.
 If the other operand is a matrix, they are multiplied as per matrix multiplication.
 Note that the returned matrix may have different size than the input matrices as a result
-of this. The two matrices must agree on the size as per matrix multiplication.")
+of this. The two matrices must agree on the size as per matrix multiplication.
+
+A special provision is made to allow for MAT4*VEC3, which acts as MAT4*(VEC4 X Y Z 1)
+and discarding the W component.")
 
   (function nm*
     "Computes a modifying matrix multiplication.
@@ -183,6 +186,9 @@ Note that this only works for square matrix against square matrix, as otherwise 
 change would occur, which is not possible to do in a modifying variant. The two matrices
 must agree on the size as per matrix multiplication.
 If the other operand is a vector, the vector is modified.
+
+A special provision is made to allow for MAT4*VEC3, which acts as MAT4*(VEC4 X Y Z 1)
+and discarding the W component.
 
 See N*M")
 

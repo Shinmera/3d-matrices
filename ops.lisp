@@ -350,6 +350,9 @@
                            (5 (with-fast-matref (f b ,ncols) (matn 3 ,ncols (list ,@(unroll-axb 3 3 5)))))))))))
              (mat4 (etypecase ,b
                      (,*float-type* (mat ,@(unroll 16)))
+                     (vec3 (vec3 (+ (* (vx3 ,b) (e 0 0)) (* (vy3 ,b) (e 0 1)) (* (vz3 ,b) (e 0 2)) (*          (e 0 3)))
+                                 (+ (* (vx3 ,b) (e 1 0)) (* (vy3 ,b) (e 1 1)) (* (vz3 ,b) (e 1 2)) (*          (e 1 3)))
+                                 (+ (* (vx3 ,b) (e 2 0)) (* (vy3 ,b) (e 2 1)) (* (vz3 ,b) (e 2 2)) (*          (e 2 3)))))
                      (vec4 (vec4 (+ (* (vx4 ,b) (e 0 0)) (* (vy4 ,b) (e 0 1)) (* (vz4 ,b) (e 0 2)) (* (vw4 ,b) (e 0 3)))
                                  (+ (* (vx4 ,b) (e 1 0)) (* (vy4 ,b) (e 1 1)) (* (vz4 ,b) (e 1 2)) (* (vw4 ,b) (e 1 3)))
                                  (+ (* (vx4 ,b) (e 2 0)) (* (vy4 ,b) (e 2 1)) (* (vz4 ,b) (e 2 2)) (* (vw4 ,b) (e 2 3)))
@@ -403,6 +406,10 @@
                       (mat3 (with-fast-matref (f ,b 3) (matf ,u ,@(unrollm 3))))))
            (mat4 (etypecase ,b
                    (,*float-type* (matf ,a ,@(unroll 16)))
+                   (vec3 (3d-vectors::%vsetf ,b
+                                             (+ (* (vx3 ,b) (e 0 0)) (* (vy3 ,b) (e 0 1)) (* (vz3 ,b) (e 0 2)) (*          (e 0 3)))
+                                             (+ (* (vx3 ,b) (e 1 0)) (* (vy3 ,b) (e 1 1)) (* (vz3 ,b) (e 1 2)) (*          (e 1 3)))
+                                             (+ (* (vx3 ,b) (e 2 0)) (* (vy3 ,b) (e 2 1)) (* (vz3 ,b) (e 2 2)) (*          (e 2 3)))))
                    (vec4 (3d-vectors::%vsetf ,b
                                              (+ (* (vx4 ,b) (e 0 0)) (* (vy4 ,b) (e 0 1)) (* (vz4 ,b) (e 0 2)) (* (vw4 ,b) (e 0 3)))
                                              (+ (* (vx4 ,b) (e 1 0)) (* (vy4 ,b) (e 1 1)) (* (vz4 ,b) (e 1 2)) (* (vw4 ,b) (e 1 3)))
