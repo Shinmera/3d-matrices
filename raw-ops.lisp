@@ -127,8 +127,7 @@
 (define-template m*m <s> <t> (x m n)
   (let ((type (type-instance 'mat-type <s> <t>)))
     `((declare (type ,(lisp-type type) x m n)
-               (return-type ,(lisp-type type))
-               inline)
+               (return-type ,(lisp-type type)))
       (let ((ma ,(place-form type 'arr 'm))
             (na ,(place-form type 'arr 'n))
             (xa ,(place-form type 'arr 'x))
@@ -151,8 +150,7 @@
 (define-template mdet <s> <t> (m)
   (let ((type (type-instance 'mat-type <s> <t>)))
     `((declare (type ,(lisp-type type) m)
-               (return-type ,<t>)
-               inline)
+               (return-type ,<t>))
       (let ((ma ,(place-form type 'arr 'm)))
         ,(case <s>
            ;; FIXME: This *sucks*. Can't we compute this expansion?
@@ -189,6 +187,153 @@
                        for i from 0 below rows
                        finally (return det))))))))))
 
+(define-template mtranspose <s> <t> (x m)
+  (let ((type (type-instance 'mat-type <s> <t>)))
+    `((declare (type ,(lisp-type type) x m)
+               (return-type ,(lisp-type type))
+               inline)
+      (let ((ma ,(place-form type 'arr 'm))
+            (xa ,(place-form type 'arr 'x))
+            (xc ,(attribute type :cols 'c)))
+        (do-times (y 0 ,(attribute type :cols) 1 x)
+          (do-times (x 0 ,(attribute type :rows) 1)
+            (setf (aref xa (+ y (* x xc))) (aref ma (+ x (* y xc))))))))))
+
+(define-template mtrace <s> <t> (m)
+  (let ((type (type-instance 'mat-type <s> <t>)))
+    `((declare (type ,(lisp-type type) m)
+               (return-type ,<t>)
+               inline)
+      (let ((ma ,(place-form type 'arr 'm))
+            (r (,<t> 0)))
+        (do-times (i 0 (expt 2 (min ,(attribute type :cols) ,(attribute type :rows))) (1+ ,(attribute type :cols)) r)
+          (setf r (+ r (aref ma i))))))))
+
+(define-template mtransfer <sx> <s> <t> (x m xy xx w h my mx)
+  (let ((type (type-instance 'mat-type <s> <t>))
+        (rett (type-instance 'mat-type <sx> <t>)))
+    `((declare (type ,(lisp-type type) m)
+               (type ,(lisp-type rett) x)
+               (type mat-dim xy xx w h my mx)
+               (return-type ,(lisp-type rett))
+               inline)
+      (let* ((ma ,(place-form type 'arr 'm))
+             (xa ,(place-form rett 'arr 'x))
+             (mc ,(attribute type :cols 'm))
+             (xc ,(attribute rett :cols 'x))
+             (xi (+ xx (* xc xy)))
+             (mi (+ mx (* mc my))))
+        (declare (type mat-dim xi mi mc xc))
+        (dotimes (_ h x)
+          (dotimes (i w)
+            (setf (aref xa (+ xi i)) (aref ma (+ mi i))))
+          (setf xi (+ xi xc))
+          (setf mi (+ mi mc)))))))
+
+(define-template mtranslation <s> <t> (x v)
+  (when (member <s> '(2 n)) (template-unfulfillable))
+  (let ((type (type-instance 'mat-type <s> <t>))
+        (vtype (type-instance 'org.shirakumo.fraf.vectors::vec-type (case <s> (4 3) (3 2)) <t>)))
+    (flet ((f (&rest args)
+             (loop for i from 0
+                   for arg in args
+                   collect `(setf (aref xa ,i) (,<t> ,arg)))))
+      `((declare (type ,(lisp-type type) x)
+                 (type ,(lisp-type vtype) v)
+                 (return-type ,(lisp-type type)))
+        (let ((xa ,(place-form type 'arr 'x)))
+          ,@(case <s>
+              (3 (f 1 0 (place-form vtype :x 'v)
+                    0 1 (place-form vtype :y 'v)
+                    0 0 1))
+              (4 (f 1 0 0 (place-form vtype :x 'v)
+                    0 1 0 (place-form vtype :y 'v)
+                    0 0 1 (place-form vtype :z 'v)
+                    0 0 0 1))
+              (T (template-unfulfillable)))
+          x)))))
+
+(define-template mscaling <s> <t> (x v)
+  (when (member <s> '(n)) (template-unfulfillable))
+  (let ((type (type-instance 'mat-type <s> <t>))
+        (vtype (type-instance 'org.shirakumo.fraf.vectors::vec-type (case <s> (4 3) ((3 2) 2)) <t>)))
+    (flet ((f (&rest args)
+             (loop for i from 0
+                   for arg in args
+                   collect `(setf (aref xa ,i) (,<t> ,arg)))))
+      `((declare (type ,(lisp-type type) x)
+                 (type ,(lisp-type vtype) v)
+                 (return-type ,(lisp-type type)))
+        (let ((xa ,(place-form type 'arr 'x)))
+          ,@(case <s>
+              (2 (f (place-form vtype :x 'v) 0
+                    0 (place-form vtype :y 'v)))
+              (3 (f (place-form vtype :x 'v) 0 0
+                    0 (place-form vtype :y 'v) 0
+                    0 0 1))
+              (4 (f (place-form vtype :x 'v) 0 0 0
+                    0 (place-form vtype :y 'v) 0 0
+                    0 0 (place-form vtype :z 'v) 0
+                    0 0 0 1))
+              (T (template-unfulfillable)))
+          x)))))
+
+(define-template mrotation <s> <t> (x v angle)
+  (when (member <s> '(n)) (template-unfulfillable))
+  (when (member <t> '(i32 u32)) (template-unfulfillable))
+  (let ((type (type-instance 'mat-type <s> <t>))
+        (vtype (type-instance 'org.shirakumo.fraf.vectors::vec-type 3 <t>)))
+    (flet ((f (&rest args)
+             (loop for i from 0
+                   for arg in args
+                   collect `(setf (aref xa ,i) (,<t> ,arg)))))
+      `((declare (type ,(lisp-type type) x)
+                 (type ,(lisp-type vtype) v)
+                 (type ,<t> angle)
+                 (return-type ,(lisp-type type)))
+        (let ((xa ,(place-form type 'arr 'x))
+              (c (,<t> (cos angle)))
+              (s (,<t> (sin angle))))
+          ,@(case <s>
+              (2 (f 'c '(- s)
+                    's 'c))
+              (T `((macrolet ((%mat (&rest els)
+                                 `(progn ,@(loop for el in els
+                                                 for i from 0 for x = (mod i 4) for y = (floor i 4)
+                                                 when (and (< x ,<s>) (< y ,<s>))
+                                                 collect `(setf (aref xa ,i) ,(list ',<t> el))))))
+                      (cond ((v= +vx3+ v)
+                             (%mat 1 0 0 0
+                                   0 c (- s) 0
+                                   0 s c 0
+                                   0 0 0 1))
+                            ((v= +vy3+ v)
+                             (%mat c 0 s 0
+                                   0 1 0 0
+                                   (- s) 0 c 0
+                                   0 0 0 1))
+                            ((v= +vz3+ v)
+                             (%mat c (- s) 0 0
+                                   s c 0 0
+                                   0 0 1 0
+                                   0 0 0 1))
+                            (T
+                             ;; https://joombig.com/sqlc/3D-Rotation-Algorithm-about-arbitrary-axis-with-CC-code-tutorials-advance
+                             (let* ((x ,(place-form vtype :x 'v))
+                                    (y ,(place-form vtype :y 'v))
+                                    (z ,(place-form vtype :z 'v))
+                                    (1-c (- 1 c))
+                                    (u2 (expt x 2))
+                                    (v2 (expt y 2))
+                                    (w2 (expt z 2))
+                                    (l (+ u2 v2 w2))
+                                    (sqrtl (sqrt l)))
+                               (%mat (/ (+ u2 (* (+ v2 w2) c)) l)        (/ (- (* x y 1-c) (* z sqrtl s)) l) (/ (+ (* x z 1-c) (* y sqrtl s)) l) 0
+                                     (/ (+ (* x y 1-c) (* z sqrtl s)) l) (/ (+ v2 (* (+ u2 w2) c)) l)        (/ (- (* y z 1-c) (* x sqrtl s)) l) 0
+                                     (/ (- (* x z 1-c) (* y sqrtl s)) l) (/ (+ (* y z 1-c) (* x sqrtl s)) l) (/ (+ w2 (* (+ u2 v2) c)) l)        0
+                                     0                                   0                                   0                                   1))))))))
+          x)))))
+
 ;; [x] mcopy
 ;; [x] mzero meye mrand
 ;; [x] miref
@@ -197,30 +342,30 @@
 ;; [x] m= m~= m/= m< m> m<= m>=
 ;; [x] m+ m- m/
 ;; [x] m*
-;; [ ] mapply mapplyf
 ;; [x] mdet
+;; [x] mtranspose
+;; [x] mtrace
 ;; [ ] minv
-;; [ ] mtranspose
-;; [ ] mtrace
 ;; [ ] mminor
 ;; [ ] mcofactor
 ;; [ ] mcof
 ;; [ ] madj
 ;; [ ] mpivot
 ;; [ ] mlu
-;; [ ] mtranslation
-;; [ ] mscaling
-;; [ ] mrotation
-;; [ ] mlookat mfrustum mortho mperspective
+;; [ ] mqr
+;; [x] mtranslation
+;; [x] mscaling
+;; [x] mrotation
+;; [ ] mlookat
+;; [ ] mfrustum
+;; [ ] mortho
+;; [ ] mperspective
 ;; [ ] m1norm
 ;; [ ] minorm
 ;; [ ] m2norm
-;; [ ] mqr
-;; [ ] meigen
-;; [ ] mcol mrow mblock
+;; [/] meigen
+;; [/] mblock mcol mrow mswap-row mswap-col
 ;; [ ] mdiag
-;; [ ] mswap-row
-;; [ ] mswap-col
 
 (do-mat-combinations define-copy)
 (do-mat-combinations define-aref)
@@ -234,3 +379,10 @@
 (do-mat-combinations define-0matop (zero eye rand))
 (do-mat-combinations define-m*m)
 (do-mat-combinations define-mdet)
+(do-mat-combinations define-mtranspose)
+(do-mat-combinations define-mtrace)
+(do-mat-combinations define-mtransfer (2 3 4 n))
+(do-mat-combinations define-mtranslation)
+(do-mat-combinations define-mscaling)
+(do-mat-combinations define-mrotation)
+

@@ -36,10 +36,10 @@
 (defun ~/= (a b)
   (<= *eps* (abs (- a b))))
 
-(defmacro do-times ((var start end &optional (by 1) return) &body body)
-  (if (and (integerp start) (integerp end))
+(defmacro do-times (&environment env (var start end &optional (by 1) return) &body body)
+  (if (and (constantp start env) (constantp end env) (constantp by env))
       `(progn
-         ,@(loop for i from start below end by by
+         ,@(loop for i from (eval start) below (eval end) by (eval by)
                  collect `(let ((,var ,i))
                             (declare (ignorable ,var))
                             ,@body))
