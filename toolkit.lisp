@@ -40,9 +40,11 @@
   (if (and (integerp start) (integerp end))
       `(progn
          ,@(loop for i from start below end by by
-                 collect `(let ((,var ,i)) ,@body))
+                 collect `(let ((,var ,i))
+                            (declare (ignorable ,var))
+                            ,@body))
          ,return)
-      `(loop for i from ,start below ,end by ,by
+      `(loop for ,var from ,start below ,end by ,by
              do (progn ,@body)
              finally (return ,return))))
 

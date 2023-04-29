@@ -76,7 +76,7 @@
       (let ((xa ,(place-form type 'arr 'x)))
         (do-times (i 0 ,(attribute type :len 'x) 1 x)
           (multiple-value-bind (y x) (floor i ,(attribute type :cols 'x))
-            (setf (aref xa i) (,<t> (,<op> x y)))))))))
+            (setf (aref xa i) (,<t> (,<op> ',<t> x y)))))))))
 
 (define-template 2matreduce <red> <comb> rtype <s> <t> (m n)
   (let ((type (type-instance 'mat-type <s> <t>))
@@ -124,17 +124,81 @@
           (setf r (,<red> r (,<comb> (aref ma i) s))))
         (,(if (member rtype '(f32 f64 i32 u32)) rtype 'progn) r)))))
 
+(define-template m*m <s> <t> (x m n)
+  (let ((type (type-instance 'mat-type <s> <t>)))
+    `((declare (type ,(lisp-type type) x m n)
+               (return-type ,(lisp-type type))
+               inline)
+      (let ((ma ,(place-form type 'arr 'm))
+            (na ,(place-form type 'arr 'n))
+            (xa ,(place-form type 'arr 'x))
+            (mc ,(attribute type :cols 'm))
+            (nc ,(attribute type :cols 'n))
+            (xi 0) (mi 0))
+        (do-times (xy 0 ,(attribute type :rows 'x) 1 x)
+          (do-times (xx 0 ,(attribute type :cols 'x) 1)
+            (let ((c (,<t> 0))
+                  (mi mi)
+                  (ni xx))
+              (do-times (i 0 ,(attribute type :cols 'm) 1)
+                (setf c (,<t> (+ c (* (aref ma mi) (aref na ni)))))
+                (incf ni nc)
+                (incf mi 1))
+              (setf (aref xa xi) c)
+              (incf xi)))
+          (incf mi mc))))))
+
+(define-template mdet <s> <t> (m)
+  (let ((type (type-instance 'mat-type <s> <t>)))
+    `((declare (type ,(lisp-type type) m)
+               (return-type ,<t>)
+               inline)
+      (let ((ma ,(place-form type 'arr 'm)))
+        ,(case <s>
+           ;; FIXME: This *sucks*. Can't we compute this expansion?
+           (2 `(macrolet ((e (y x) `(aref ma (+ ,x (* ,y 2)))))
+                 (- (* (e 0 0) (e 1 1))
+                    (* (e 0 1) (e 1 0)))))
+           (3 `(macrolet ((e (y x) `(aref ma (+ ,x (* ,y 3)))))
+                 (- (+ (* (e 0 0) (e 1 1) (e 2 2))
+                       (* (e 0 1) (e 1 2) (e 2 0))
+                       (* (e 0 2) (e 1 0) (e 2 1)))
+                    (+ (* (e 0 0) (e 1 2) (e 2 1))
+                       (* (e 0 1) (e 1 0) (e 2 2))
+                       (* (e 0 2) (e 1 1) (e 2 0))))))
+           (4 `(macrolet ((e (y x) `(aref ma (+ ,x (* ,y 4)))))
+                 (- (+ (* (e 0 3) (e 1 2) (e 2 1) (e 3 0)) (* (e 0 0) (e 1 1) (e 2 2) (e 3 3))
+                       (* (e 0 1) (e 1 3) (e 2 2) (e 3 0)) (* (e 0 2) (e 1 1) (e 2 3) (e 3 0))
+                       (* (e 0 2) (e 1 3) (e 2 0) (e 3 1)) (* (e 0 3) (e 1 0) (e 2 2) (e 3 1))
+                       (* (e 0 0) (e 1 2) (e 2 3) (e 3 1)) (* (e 0 3) (e 1 1) (e 2 0) (e 3 2))
+                       (* (e 0 0) (e 1 3) (e 2 1) (e 3 2)) (* (e 0 1) (e 1 0) (e 2 3) (e 3 2))
+                       (* (e 0 1) (e 1 2) (e 2 0) (e 3 3)) (* (e 0 2) (e 1 0) (e 2 1) (e 3 3)))
+                    (+ (* (e 0 2) (e 1 3) (e 2 1) (e 3 0)) (* (e 0 3) (e 1 1) (e 2 2) (e 3 0))
+                       (* (e 0 1) (e 1 2) (e 2 3) (e 3 0)) (* (e 0 3) (e 1 2) (e 2 0) (e 3 1))
+                       (* (e 0 0) (e 1 3) (e 2 2) (e 3 1)) (* (e 0 2) (e 1 0) (e 2 3) (e 3 1))
+                       (* (e 0 1) (e 1 3) (e 2 0) (e 3 2)) (* (e 0 3) (e 1 0) (e 2 1) (e 3 2))
+                       (* (e 0 0) (e 1 1) (e 2 3) (e 3 2)) (* (e 0 2) (e 1 1) (e 2 0) (e 3 3))
+                       (* (e 0 0) (e 1 2) (e 2 1) (e 3 3)) (* (e 0 1) (e 1 0) (e 2 2) (e 3 3))))))
+           (T
+            `(multiple-value-bind (LU P s) (mlu m)
+               (declare (ignore P))
+               (let ((rows (mrows LU))
+                     (cols (mcols LU))
+                     (arr (marr LU)))
+                 (loop for det = (,<t> 0) then (* (expt -1.0 s) det (aref arr (+ i (* i cols))))
+                       for i from 0 below rows
+                       finally (return det))))))))))
+
 ;; [x] mcopy
 ;; [x] mzero meye mrand
 ;; [x] miref
 ;; [x] mcref
 ;; [x] msetf
 ;; [x] m= m~= m/= m< m> m<= m>=
-;; [x] m+ m-
-;; [ ] m* m/
-;; [ ] mapply
-;; [ ] mapplyf
-;; [ ] mdet
+;; [x] m+ m- m/
+;; [x] m*
+;; [ ] mapply mapplyf
+;; [x] mdet
 ;; [ ] minv
 ;; [ ] mtranspose
 ;; [ ] mtrace
@@ -147,19 +211,14 @@
 ;; [ ] mtranslation
 ;; [ ] mscaling
 ;; [ ] mrotation
-;; [ ] mlookat
-;; [ ] mfrustum
-;; [ ] mortho
-;; [ ] mperspective
+;; [ ] mlookat mfrustum mortho mperspective
 ;; [ ] m1norm
 ;; [ ] minorm
 ;; [ ] m2norm
 ;; [ ] mqr
 ;; [ ] meigen
-;; [ ] mcol
-;; [ ] mrow
+;; [ ] mcol mrow mblock
 ;; [ ] mdiag
-;; [ ] mblock
 ;; [ ] mswap-row
 ;; [ ] mswap-col
 
@@ -173,3 +232,5 @@
 (do-mat-combinations define-2matreduce (or) (/=) boolean)
 (do-mat-combinations define-smatreduce (or) (/=) (<t> real) boolean)
 (do-mat-combinations define-0matop (zero eye rand))
+(do-mat-combinations define-m*m)
+(do-mat-combinations define-mdet)
