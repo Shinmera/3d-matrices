@@ -230,109 +230,121 @@
           (setf xi (+ xi xc))
           (setf mi (+ mi mc)))))))
 
-(define-template mtranslation <s> <t> (x v)
+(defmacro define-generation-template (name args &body body)
+  `(define-template ,name <s> <t> ,args
+     (let ((type (type-instance 'mat-type <s> <t>)))
+       (flet ((f (&rest args)
+                (loop for arg in args
+                      for i from 0 for x = (mod i 4) for y = (floor i 4)
+                      when (and (< x <s>) (< y <s>))
+                      collect `(setf (aref xa ,i) (,<t> ,arg)))))
+         `((declare (type ,(lisp-type type) x)
+                    (return-type ,(lisp-type type)))
+           (let ((xa ,(place-form type 'arr 'x)))
+             ,@(progn ,@body))
+           x)))))
+
+(define-generation-template mtranslation (x v)
   (when (member <s> '(2 n)) (template-unfulfillable))
-  (let ((type (type-instance 'mat-type <s> <t>))
-        (vtype (type-instance 'org.shirakumo.fraf.vectors::vec-type (case <s> (4 3) (3 2)) <t>)))
-    (flet ((f (&rest args)
-             (loop for i from 0
-                   for arg in args
-                   collect `(setf (aref xa ,i) (,<t> ,arg)))))
-      `((declare (type ,(lisp-type type) x)
-                 (type ,(lisp-type vtype) v)
-                 (return-type ,(lisp-type type)))
-        (let ((xa ,(place-form type 'arr 'x)))
-          ,@(case <s>
-              (3 (f 1 0 (place-form vtype :x 'v)
-                    0 1 (place-form vtype :y 'v)
-                    0 0 1))
-              (4 (f 1 0 0 (place-form vtype :x 'v)
-                    0 1 0 (place-form vtype :y 'v)
-                    0 0 1 (place-form vtype :z 'v)
-                    0 0 0 1))
-              (T (template-unfulfillable)))
-          x)))))
+  (let ((vtype (type-instance 'org.shirakumo.fraf.vectors::vec-type (case <s> (4 3) (3 2)) <t>)))
+    `((declare (type ,(lisp-type vtype) v))
+      ,@(case <s>
+          (3 (f 1 0 (place-form vtype :x 'v)
+                0 1 (place-form vtype :y 'v)
+                0 0 1))
+          (4 (f 1 0 0 (place-form vtype :x 'v)
+                0 1 0 (place-form vtype :y 'v)
+                0 0 1 (place-form vtype :z 'v)
+                0 0 0 1))))))
 
-(define-template mscaling <s> <t> (x v)
+(define-generation-template mscaling (x v)
   (when (member <s> '(n)) (template-unfulfillable))
-  (let ((type (type-instance 'mat-type <s> <t>))
-        (vtype (type-instance 'org.shirakumo.fraf.vectors::vec-type (case <s> (4 3) ((3 2) 2)) <t>)))
-    (flet ((f (&rest args)
-             (loop for i from 0
-                   for arg in args
-                   collect `(setf (aref xa ,i) (,<t> ,arg)))))
-      `((declare (type ,(lisp-type type) x)
-                 (type ,(lisp-type vtype) v)
-                 (return-type ,(lisp-type type)))
-        (let ((xa ,(place-form type 'arr 'x)))
-          ,@(case <s>
-              (2 (f (place-form vtype :x 'v) 0
-                    0 (place-form vtype :y 'v)))
-              (3 (f (place-form vtype :x 'v) 0 0
-                    0 (place-form vtype :y 'v) 0
-                    0 0 1))
-              (4 (f (place-form vtype :x 'v) 0 0 0
-                    0 (place-form vtype :y 'v) 0 0
-                    0 0 (place-form vtype :z 'v) 0
-                    0 0 0 1))
-              (T (template-unfulfillable)))
-          x)))))
+  (let ((vtype (type-instance 'org.shirakumo.fraf.vectors::vec-type (case <s> (4 3) ((3 2) 2)) <t>)))
+    `((declare (type ,(lisp-type vtype) v))
+      ,@(case <s>
+          (2 (f (place-form vtype :x 'v) 0
+                0 (place-form vtype :y 'v)))
+          (3 (f (place-form vtype :x 'v) 0 0
+                0 (place-form vtype :y 'v) 0
+                0 0 1))
+          (4 (f (place-form vtype :x 'v) 0 0 0
+                0 (place-form vtype :y 'v) 0 0
+                0 0 (place-form vtype :z 'v) 0
+                0 0 0 1))
+          (T (template-unfulfillable))))))
 
-(define-template mrotation <s> <t> (x v angle)
+(define-generation-template mrotation (x v angle)
   (when (member <s> '(n)) (template-unfulfillable))
   (when (member <t> '(i32 u32)) (template-unfulfillable))
-  (let ((type (type-instance 'mat-type <s> <t>))
-        (vtype (type-instance 'org.shirakumo.fraf.vectors::vec-type 3 <t>)))
-    (flet ((f (&rest args)
-             (loop for i from 0
-                   for arg in args
-                   collect `(setf (aref xa ,i) (,<t> ,arg)))))
-      `((declare (type ,(lisp-type type) x)
-                 (type ,(lisp-type vtype) v)
-                 (type ,<t> angle)
-                 (return-type ,(lisp-type type)))
-        (let ((xa ,(place-form type 'arr 'x))
-              (c (,<t> (cos angle)))
-              (s (,<t> (sin angle))))
-          ,@(case <s>
-              (2 (f 'c '(- s)
-                    's 'c))
-              (T `((macrolet ((%mat (&rest els)
-                                 `(progn ,@(loop for el in els
-                                                 for i from 0 for x = (mod i 4) for y = (floor i 4)
-                                                 when (and (< x ,<s>) (< y ,<s>))
-                                                 collect `(setf (aref xa ,i) ,(list ',<t> el))))))
-                      (cond ((v= +vx3+ v)
-                             (%mat 1 0 0 0
-                                   0 c (- s) 0
-                                   0 s c 0
-                                   0 0 0 1))
-                            ((v= +vy3+ v)
-                             (%mat c 0 s 0
-                                   0 1 0 0
-                                   (- s) 0 c 0
-                                   0 0 0 1))
-                            ((v= +vz3+ v)
-                             (%mat c (- s) 0 0
-                                   s c 0 0
-                                   0 0 1 0
-                                   0 0 0 1))
-                            (T
-                             ;; https://joombig.com/sqlc/3D-Rotation-Algorithm-about-arbitrary-axis-with-CC-code-tutorials-advance
-                             (let* ((x ,(place-form vtype :x 'v))
-                                    (y ,(place-form vtype :y 'v))
-                                    (z ,(place-form vtype :z 'v))
-                                    (1-c (- 1 c))
-                                    (u2 (expt x 2))
-                                    (v2 (expt y 2))
-                                    (w2 (expt z 2))
-                                    (l (+ u2 v2 w2))
-                                    (sqrtl (sqrt l)))
-                               (%mat (/ (+ u2 (* (+ v2 w2) c)) l)        (/ (- (* x y 1-c) (* z sqrtl s)) l) (/ (+ (* x z 1-c) (* y sqrtl s)) l) 0
-                                     (/ (+ (* x y 1-c) (* z sqrtl s)) l) (/ (+ v2 (* (+ u2 w2) c)) l)        (/ (- (* y z 1-c) (* x sqrtl s)) l) 0
-                                     (/ (- (* x z 1-c) (* y sqrtl s)) l) (/ (+ (* y z 1-c) (* x sqrtl s)) l) (/ (+ w2 (* (+ u2 v2) c)) l)        0
-                                     0                                   0                                   0                                   1))))))))
-          x)))))
+  (let ((vtype (type-instance 'org.shirakumo.fraf.vectors::vec-type 3 <t>)))
+    `((declare (type ,(lisp-type vtype) v)
+               (type ,<t> angle))
+      (let ((c (,<t> (cos angle)))
+            (s (,<t> (sin angle))))
+        ,@(case <s>
+            (2 (f 'c '(- s)
+                  's 'c))
+            (T `((cond ((v= +vx3+ v)
+                        ,@(f 1 0 0 0
+                             0 'c '(- s) 0
+                             0 's 'c 0
+                             0 0 0 1))
+                       ((v= +vy3+ v)
+                        ,@(f 'c 0 's 0
+                             0 1 0 0
+                             '(- s) 0 'c 0
+                             0 0 0 1))
+                       ((v= +vz3+ v)
+                        ,@(f 'c '(- s) 0 0
+                             's 'c 0 0
+                             0 0 1 0
+                             0 0 0 1))
+                       (T
+                        ;; https://joombig.com/sqlc/3D-Rotation-Algorithm-about-arbitrary-axis-with-CC-code-tutorials-advance
+                        (let* ((x ,(place-form vtype :x 'v))
+                               (y ,(place-form vtype :y 'v))
+                               (z ,(place-form vtype :z 'v))
+                               (1-c (- 1 c))
+                               (u2 (expt x 2))
+                               (v2 (expt y 2))
+                               (w2 (expt z 2))
+                               (l (+ u2 v2 w2))
+                               (sqrtl (sqrt l)))
+                          ,@(f '(/ (+ u2 (* (+ v2 w2) c)) l)        '(/ (- (* x y 1-c) (* z sqrtl s)) l) '(/ (+ (* x z 1-c) (* y sqrtl s)) l) 0
+                               '(/ (+ (* x y 1-c) (* z sqrtl s)) l) '(/ (+ v2 (* (+ u2 w2) c)) l)        '(/ (- (* y z 1-c) (* x sqrtl s)) l) 0
+                               '(/ (- (* x z 1-c) (* y sqrtl s)) l) '(/ (+ (* y z 1-c) (* x sqrtl s)) l) '(/ (+ w2 (* (+ u2 v2) c)) l)        0
+                               0                                   0                                   0                                   1)))))))))))
+
+(define-generation-template mlookat (x eye target up)
+  (unless (eql <s> 4) (template-unfulfillable))
+  (when (member <t> '(i32 u32)) (template-unfulfillable))
+  (let ((vtype (type-instance 'org.shirakumo.fraf.vectors::vec-type 3 <t>)))
+    `((declare (type ,(lisp-type vtype) eye target up))
+      (let* ((z (nvunit (v- eye target)))
+             (x (nvunit (vc up z)))
+             (y (vc z x)))
+        ,@(f (place-form vtype :x 'x) (place-form vtype :y 'x) (place-form vtype :z 'x) '(- (v. x eye))
+             (place-form vtype :x 'y) (place-form vtype :y 'y) (place-form vtype :z 'y) '(- (v. y eye))
+             (place-form vtype :x 'z) (place-form vtype :y 'z) (place-form vtype :z 'z) '(- (v. z eye))
+             0 0 1)))))
+
+(define-generation-template mfrustum (x l r b u n f)
+  (unless (eql <s> 4) (template-unfulfillable))
+  (when (member <t> '(i32 u32)) (template-unfulfillable))
+  `((declare (type ,<t> l r b u n f))
+    ,@(f '(/ (* 2 n) (- r l)) 0                    '(/ (+ r l) (- r l))     0
+         0                    '(/ (* 2 n) (- u b)) '(/ (+ u b) (- u b))     0
+         0                    0                    '(- (/ (+ f n) (- f n))) '(/ (* -2 f n) (- f n))
+         0                    0                    -1                       0)))
+
+(define-generation-template mortho (x l r b u n f)
+  (unless (eql <s> 4) (template-unfulfillable))
+  (when (member <t> '(i32 u32)) (template-unfulfillable))
+  `((declare (type ,<t> l r b u n f))
+    ,@(f '(/ 2 (- r l)) 0              0              '(- (/ (+ r l) (- r l)))
+         0              '(/ 2 (- u b)) 0              '(- (/ (+ u b) (- u b)))
+         0              0             '(/ -2 (- f n)) '(- (/ (+ f n) (- f n)))
+         0              0              0              1)))
 
 ;; [x] mcopy
 ;; [x] mzero meye mrand
@@ -356,10 +368,10 @@
 ;; [x] mtranslation
 ;; [x] mscaling
 ;; [x] mrotation
-;; [ ] mlookat
-;; [ ] mfrustum
-;; [ ] mortho
-;; [ ] mperspective
+;; [x] mlookat
+;; [x] mfrustum
+;; [x] mortho
+;; [/] mperspective
 ;; [ ] m1norm
 ;; [ ] minorm
 ;; [ ] m2norm
@@ -385,4 +397,6 @@
 (do-mat-combinations define-mtranslation)
 (do-mat-combinations define-mscaling)
 (do-mat-combinations define-mrotation)
-
+(do-mat-combinations define-mlookat)
+(do-mat-combinations define-mfrustum)
+(do-mat-combinations define-mortho)
