@@ -18,15 +18,6 @@
         (,(constructor type) arr ,@(when (eql 'n <s>) `(,(place-form type 'cols 'm)
                                                         ,(place-form type 'rows 'm))))))))
 
-(define-template zero <s> <t> (x)
-  (let ((type (type-instance 'mat-type <s> <t>)))
-    `((declare (type ,(lisp-type type) x)
-               (return-type ,(lisp-type type))
-               inline)
-      (let ((xa ,(place-form type 'arr 'x)))
-        (do-times (i 0 ,(attribute type :len) x)
-          (setf (aref xa i) ,(funcall <t> 0)))))))
-
 (define-template aref <s> <t> (m i)
   (let ((type (type-instance 'mat-type <s> <t>)))
     `((declare (type ,(lisp-type type) m)
@@ -77,6 +68,16 @@
         (do-times (i 0 ,(attribute type :len) 1 x)
           (setf (aref xa i) (,<op> (aref ma i))))))))
 
+(define-template 0matop <op> <s> <t> (x)
+  (let ((type (type-instance 'mat-type <s> <t>)))
+    `((declare (type ,(lisp-type type) x)
+               (return-type ,(lisp-type type))
+               inline)
+      (let ((xa ,(place-form type 'arr 'x)))
+        (do-times (i 0 ,(attribute type :len 'x) 1 x)
+          (multiple-value-bind (y x) (floor i ,(attribute type :cols 'x))
+            (setf (aref xa i) (,<t> (,<op> x y)))))))))
+
 (define-template 2matreduce <red> <comb> rtype <s> <t> (m n)
   (let ((type (type-instance 'mat-type <s> <t>))
         (rtype (case rtype
@@ -123,25 +124,11 @@
           (setf r (,<red> r (,<comb> (aref ma i) s))))
         (,(if (member rtype '(f32 f64 i32 u32)) rtype 'progn) r)))))
 
-(define-template eye <s> <t> (x)
-  (let* ((type (type-instance 'mat-type <s> <t>))
-         (cols (attribute type :cols 'x)))
-    `((declare (type ,(lisp-type type) x)
-               (return-type ,(lisp-type type))
-               inline)
-      (let* ((xa ,(place-form type 'arr 'x)))
-        (do-times (i 0 ,(attribute type :len 'x))
-          (setf (aref xa i) (,<t> 0)))
-        (do-times (i 0 ,(attribute type :len 'x) ,(if (integerp cols) (1+ cols) `(1+ ,cols)) x)
-          (setf (aref xa i) (,<t> 1)))))))
-
 ;; [x] mcopy
-;; [x] mzero
+;; [x] mzero meye mrand
 ;; [x] miref
 ;; [x] mcref
 ;; [x] msetf
-;; [x] meye
-;; [ ] mrand
 ;; [x] m= m~= m/= m< m> m<= m>=
 ;; [x] m+ m-
 ;; [ ] m* m/
@@ -177,7 +164,6 @@
 ;; [ ] mswap-col
 
 (do-mat-combinations define-copy)
-(do-mat-combinations define-zero)
 (do-mat-combinations define-aref)
 (do-mat-combinations define-cref)
 (do-mat-combinations define-smatop (+ - * / min max) (<t> real))
@@ -186,4 +172,4 @@
 (do-mat-combinations define-smatreduce (and) (= ~= /= < <= >= >) (<t> real) boolean)
 (do-mat-combinations define-2matreduce (or) (/=) boolean)
 (do-mat-combinations define-smatreduce (or) (/=) (<t> real) boolean)
-(do-mat-combinations define-eye)
+(do-mat-combinations define-0matop (zero eye rand))

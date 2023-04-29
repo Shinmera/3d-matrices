@@ -45,3 +45,15 @@
       `(loop for i from ,start below ,end by ,by
              do (progn ,@body)
              finally (return ,return))))
+
+(declaim (inline zero eye rand))
+(defun zero (x y)
+  (declare (ignore x y))
+  0.0)
+
+(defun eye (x y)
+  (if (= x y) 1.0 0.0))
+
+(defun rand (x y)
+  (declare (ignore x y))
+  (random 1.0))
