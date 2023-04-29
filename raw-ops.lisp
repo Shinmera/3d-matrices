@@ -346,6 +346,46 @@
          0              0             '(/ -2 (- f n)) '(- (/ (+ f n) (- f n)))
          0              0              0              1)))
 
+(define-template m1norm <s> <t> (m)
+  (let ((type (type-instance 'mat-type <s> <t>)))
+    `((declare (type ,(lisp-type type) m)
+               (return-type ,<t>)
+               inline)
+      (let ((ma ,(place-form type 'arr 'm))
+            (mc ,(attribute type :cols))
+            (max (,<t> 0)))
+        (do-times (x 0 ,(attribute type :cols) 1 max)
+          (let ((col (,<t> 0)))
+            (do-times (y 0 ,(attribute type :rows) 1)
+              (setf col (+ col (abs (aref ma (+ x (* y mc)))))))
+            (when (< max col)
+              (setf max col))))))))
+
+(define-template minorm <s> <t> (m)
+  (let ((type (type-instance 'mat-type <s> <t>)))
+    `((declare (type ,(lisp-type type) m)
+               (return-type ,<t>)
+               inline)
+      (let ((ma ,(place-form type 'arr 'm))
+            (mc ,(attribute type :cols))
+            (max (,<t> 0)))
+        (do-times (y 0 ,(attribute type :rows) 1 max)
+          (let ((col (,<t> 0)))
+            (do-times (x 0 ,(attribute type :cols) 1)
+              (setf col (+ col (abs (aref ma (+ x (* y mc)))))))
+            (when (< max col)
+              (setf max col))))))))
+
+(define-template m2norm <s> <t> (m)
+  (let ((type (type-instance 'mat-type <s> <t>)))
+    `((declare (type ,(lisp-type type) m)
+               (return-type ,<t>)
+               inline)
+      (let ((ma ,(place-form type 'arr 'm))
+            (sum (,<t> 0)))
+        (do-times (i 0 ,(attribute type :len) 1 sum)
+          (setf sum (+ sum (expt (aref ma i) 2))))))))
+
 ;; [x] mcopy
 ;; [x] mzero meye mrand
 ;; [x] miref
@@ -372,9 +412,9 @@
 ;; [x] mfrustum
 ;; [x] mortho
 ;; [/] mperspective
-;; [ ] m1norm
-;; [ ] minorm
-;; [ ] m2norm
+;; [x] m1norm
+;; [x] minorm
+;; [x] m2norm
 ;; [/] meigen
 ;; [/] mblock mcol mrow mswap-row mswap-col
 ;; [ ] mdiag
@@ -400,3 +440,6 @@
 (do-mat-combinations define-mlookat)
 (do-mat-combinations define-mfrustum)
 (do-mat-combinations define-mortho)
+(do-mat-combinations define-m1norm)
+(do-mat-combinations define-minorm)
+(do-mat-combinations define-m2norm)
