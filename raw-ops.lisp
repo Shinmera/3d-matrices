@@ -246,7 +246,7 @@
 
 (define-generation-template mtranslation (x v)
   (when (member <s> '(2 n)) (template-unfulfillable))
-  (let ((vtype (type-instance 'org.shirakumo.fraf.vectors::vec-type (case <s> (4 3) (3 2)) <t>)))
+  (let ((vtype (type-instance 'vec-type (case <s> (4 3) (3 2)) <t>)))
     `((declare (type ,(lisp-type vtype) v))
       ,@(case <s>
           (3 (f 1 0 (place-form vtype :x 'v)
@@ -259,7 +259,7 @@
 
 (define-generation-template mscaling (x v)
   (when (member <s> '(n)) (template-unfulfillable))
-  (let ((vtype (type-instance 'org.shirakumo.fraf.vectors::vec-type (case <s> (4 3) ((3 2) 2)) <t>)))
+  (let ((vtype (type-instance 'vec-type (case <s> (4 3) ((3 2) 2)) <t>)))
     `((declare (type ,(lisp-type vtype) v))
       ,@(case <s>
           (2 (f (place-form vtype :x 'v) 0
@@ -276,7 +276,7 @@
 (define-generation-template mrotation (x v angle)
   (when (member <s> '(n)) (template-unfulfillable))
   (when (member <t> '(i32 u32)) (template-unfulfillable))
-  (let ((vtype (type-instance 'org.shirakumo.fraf.vectors::vec-type 3 <t>)))
+  (let ((vtype (type-instance 'vec-type 3 <t>)))
     `((declare (type ,(lisp-type vtype) v)
                (type ,<t> angle))
       (let ((c (,<t> (cos angle)))
@@ -318,7 +318,7 @@
 (define-generation-template mlookat (x eye target up)
   (unless (eql <s> 4) (template-unfulfillable))
   (when (member <t> '(i32 u32)) (template-unfulfillable))
-  (let ((vtype (type-instance 'org.shirakumo.fraf.vectors::vec-type 3 <t>)))
+  (let ((vtype (type-instance 'vec-type 3 <t>)))
     `((declare (type ,(lisp-type vtype) eye target up))
       (let* ((z (nvunit (v- eye target)))
              (x (nvunit (vc up z)))
