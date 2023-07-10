@@ -41,6 +41,7 @@
    #:mapplyf
    #:mdet
    #:minv
+   #:minv-affine
    #:mtranspose
    #:nmtranspose
    #:mtrace

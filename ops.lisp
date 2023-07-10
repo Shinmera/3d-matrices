@@ -569,6 +569,24 @@
                            (+ (* (e 0 2) (e 1 1) (e 2 0)) (* (e 0 0) (e 1 2) (e 2 1)) (* (e 0 1) (e 1 0) (e 2 2)))))))
       (matn (nm* (madj m) det)))))
 
+(declaim (ftype (function (mat4 &optional mat4) mat4) minv-affine))
+(define-ofun minv-affine (m &optional (out (mat4)))
+  (unless (eq m out)
+    (replace (marr4 out) (marr4 m)))
+  (with-fast-matref (m out 4)
+    ;; Transpose 3x3 rotation
+    (rotatef (m 1 0) (m 0 1))
+    (rotatef (m 2 0) (m 0 2))
+    (rotatef (m 2 1) (m 1 2))
+    ;; Transpose the translation
+    (let ((x (- (m 0  3)))
+          (y (- (m 1  3)))
+          (z (- (m 2  3))))
+      (setf (m 0 3) (+ (* x (m 0 0)) (* y (m 0 1)) (* z (m 0 2))))
+      (setf (m 1 3) (+ (* x (m 1 0)) (* y (m 1 1)) (* z (m 1 2))))
+      (setf (m 2 3) (+ (* x (m 2 0)) (* y (m 2 1)) (* z (m 2 2)))))
+    out))
+
 (declaim (ftype (function (mat) mat) mtranspose))
 (define-ofun mtranspose (m)
   (with-fast-matcase (e m)

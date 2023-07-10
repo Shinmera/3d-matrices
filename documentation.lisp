@@ -219,7 +219,17 @@ For MAT2 MAT3 MAT4, inlined variants exist. For MATN, an algorithm based on LU f
 
 This is only possible if the determinant is non-zero.
 
-For MAT2 MAT3 MAT4, inlined variants exist. For MATN, an algorithm based on the adjugate is used.")
+For MAT2 MAT3 MAT4, inlined variants exist. For MATN, an algorithm based on the adjugate is used.
+
+See MINV-AFFINE")
+
+  (function minv-affine
+    "Computes the inverses of the affine transformation matrix.
+
+If your matrix is only composed of rotation and translation, this will be
+much faster and more numerically stable than minv.
+
+See MINV")
 
   (function mtranspose
     "Computes the transpose of the matrix.
