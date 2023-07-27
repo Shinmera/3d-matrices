@@ -147,6 +147,27 @@
               (incf xi)))
           (incf mi mc))))))
 
+(define-template m*v <s> <t> (x m n)
+  (when (member <s> '(n)) (template-unfulfillable))
+  (let ((type (type-instance 'mat-type <s> <t>))
+        (vtype (type-instance 'vec-type <s> <t>)))
+    `((declare (type ,(lisp-type type) m)
+               (type ,(lisp-type vtype) x n)
+               (return-type ,(lisp-type vtype)))
+      (let ((ma ,(place-form type 'arr 'm))
+            (na ,(place-form vtype 'arr 'n))
+            (xa ,(place-form vtype 'arr 'x))
+            (mc ,(attribute type :cols 'm))
+            (mi 0))
+        (do-times (xy 0 ,(attribute type :rows 'm) 1 x)
+          (let ((c (,<t> 0))
+                (mi mi))
+            (do-times (xx 0 ,(attribute type :cols 'm) 1)
+              (setf c (,<t> (+ c (* (aref ma mi) (aref na xx))))))
+            (setf (aref xa xy) c)
+            (incf mi 1))
+          (incf mi mc))))))
+
 (define-template mdet <s> <t> (m)
   (let ((type (type-instance 'mat-type <s> <t>)))
     `((declare (type ,(lisp-type type) m)
@@ -208,6 +229,34 @@
             (r (,<t> 0)))
         (do-times (i 0 (expt 2 (min ,(attribute type :cols) ,(attribute type :rows))) (1+ ,(attribute type :cols)) r)
           (setf r (+ r (aref ma i))))))))
+
+(define-template minv-affine <s> <t> (x m)
+  (unless (eql 4 <s>) (template-unfulfillable))
+  (let ((type (type-instance 'mat-type <s> <t>)))
+    `((declare (type ,(lisp-type type) m x)
+               (return-type ,(lisp-type type))
+               inline)
+      (let ((ma ,(place-form type 'arr 'm))
+            (xa ,(place-form type 'arr 'x)))
+        (macrolet ((e (y x) `(aref ma (+ ,x (* ,y 4))))
+                   (f (y x) `(aref xa (+ ,x (* ,y 4)))))
+          ;; Transpose the 3x3 rotation matrix
+          ,@(loop for x from 0 below 3
+                  append (loop for y from 0 below 3
+                               collect `(setf (f ,y ,x) (e ,x ,y))))
+          ;; Transpose the translation vector
+          (let ((x (- (e 0 3)))
+                (y (- (e 1 3)))
+                (z (- (e 2 3))))
+            (setf (f 0 3) (,<t> (+ (* x (e 0 0)) (* y (e 0 1)) (* z (e 0 2)))))
+            (setf (f 1 3) (,<t> (+ (* x (e 1 0)) (* y (e 1 1)) (* z (e 1 2)))))
+            (setf (f 2 3) (,<t> (+ (* x (e 2 0)) (* y (e 2 1)) (* z (e 2 2))))))
+          ;; Fill the last row
+          (setf (f 3 0) (,<t> 0))
+          (setf (f 3 1) (,<t> 0))
+          (setf (f 3 2) (,<t> 0))
+          (setf (f 3 3) (,<t> 1))
+          x)))))
 
 (define-template mtransfer <sx> <s> <t> (x m xy xx w h my mx)
   (let ((type (type-instance 'mat-type <s> <t>))
@@ -398,6 +447,7 @@
 ;; [x] mtranspose
 ;; [x] mtrace
 ;; [ ] minv
+;; [x] minv-affine
 ;; [ ] mminor
 ;; [ ] mcofactor
 ;; [ ] mcof
@@ -430,7 +480,9 @@
 (do-mat-combinations define-smatreduce (or) (/=) (<t> real) boolean)
 (do-mat-combinations define-0matop (zero eye rand))
 (do-mat-combinations define-m*m)
+(do-mat-combinations define-m*v)
 (do-mat-combinations define-mdet)
+(do-mat-combinations define-minv-affine)
 (do-mat-combinations define-mtranspose)
 (do-mat-combinations define-mtrace)
 (do-mat-combinations define-mtransfer (2 3 4 n))
