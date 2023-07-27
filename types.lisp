@@ -46,7 +46,7 @@
 
 (do-mat-combinations define-mat)
 
-#-3d-vectors-no-f32 (define-type-alias fmat mat2 mat3 mat4 matn)
+#-3d-vectors-no-f32 (define-type-alias mat mat2 mat3 mat4 matn)
 #-3d-vectors-no-f64 (define-type-alias dmat dmat2 dmat3 dmat4 dmatn)
 #-3d-vectors-no-i32 (define-type-alias imat imat2 imat3 imat4 imatn)
 #-3d-vectors-no-u32 (define-type-alias umat umat2 umat3 umat4 umatn)
@@ -63,7 +63,6 @@
   #-3d-vectors-no-f32 mat3 #-3d-vectors-no-f64 dmat3 #-3d-vectors-no-i32 imat3 #-3d-vectors-no-u32 umat3
   #-3d-vectors-no-f32 mat4 #-3d-vectors-no-f64 dmat4 #-3d-vectors-no-i32 imat4 #-3d-vectors-no-u32 umat4
   #-3d-vectors-no-f32 matn #-3d-vectors-no-f64 dmatn #-3d-vectors-no-i32 imatn #-3d-vectors-no-u32 umatn)
-(deftype mat () '*mat)
 
 (define-alias mat-p (thing)
   `(typep ,thing '*mat))
@@ -128,7 +127,60 @@
                                              append (loop for arg in args repeat size
                                                           collect (place-form vec-type i arg)))))))))))))
 
+(defmacro define-mat*-constructor (type)
+  (let ((name (compose-name NIL (type-prefix type) 'mat))
+        (args (loop for i from 0 below (* 4 4) collect (compose-name NIL 'v i))))
+    (labels ((make (size args)
+               `(,(constructor (type-instance 'mat-type size type))
+                  ,(if (rest args)
+                       `(v::%vec-array ,(length args) ,type ,@args)
+                       `(map-into (make-array ,(* size size) :element-type ',type)
+                                  #',type ,(first args)))))
+             (args (n)
+               (append (loop repeat (* n n) collect 'real)
+                       (loop repeat (- (* 4 4) (* n n)) collect 'null)))
+             (make-vector (n)
+               `(,(constructor (type-instance 'mat-type n type))
+                  (map-into (make-array ,(* n n) :element-type ',type)
+                            #',type ,(first args))))
+             (case-vec (n)
+               (let ((vec-type (type-instance 'vec-type n type)))
+                 `((,@(loop repeat n collect (lisp-type vec-type))
+                    ,@(loop repeat (- (length args) n) collect 'null))
+                   ,(lisp-type (type-instance 'mat-type n type))
+                   ,(make n (loop for i from 0 below n
+                                  append (loop for arg in args repeat n
+                                               collect (place-form vec-type i arg))))))))
+      `(progn
+         (export '(,name))
+         (define-type-dispatch ,name (&optional ,@args)
+           (,(args 2) ,(lisp-type (type-instance 'mat-type 2 type))
+            ,(make 2 (subseq args 0 4)))
+           (,(args 3) ,(lisp-type (type-instance 'mat-type 3 type))
+            ,(make 3 (subseq args 0 9)))
+           (,(args 4) ,(lisp-type (type-instance 'mat-type 4 type))
+            ,(make 4 args))
+           ((mat ,@(loop repeat 15 collect 'null)) *mat
+            (mcopy ,(first args)))
+           ((vector ,@(loop repeat 15 collect 'null)) ,(ecase type
+                                                         (f32 'mat)
+                                                         (f64 'dmat)
+                                                         (i32 'imat)
+                                                         (u32 'umat))
+            (ecase (length ,(first args))
+              (2 ,(make-vector 2))
+              (3 ,(make-vector 3))
+              (4 ,(make-vector 4))))
+           ,(case-vec 2)
+           ,(case-vec 3)
+           ,(case-vec 4))))))
+
 (do-mat-combinations define-mat-constructor)
+(do-combinations define-mat*-constructor
+  (#-3d-vectors-no-f32 f32
+   #-3d-vectors-no-f64 f64
+   #-3d-vectors-no-u32 u32
+   #-3d-vectors-no-i32 i32))
 
 ;; [x] matX
 ;; [x] marrX
@@ -141,7 +193,7 @@
 ;; [x] marr
 ;; [x] mcols
 ;; [x] mrows
-;; [ ] mat
+;; [x] mat
 ;; [ ] matf
 ;; [x] write-matrix
 ;; [ ] with-fast-matref
