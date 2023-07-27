@@ -6,8 +6,16 @@
 
 (in-package #:org.shirakumo.fraf.matrices)
 
+(deftype dimension ()
+  `(integer 1 ,(truncate (sqrt array-dimension-limit))))
+
 (define-template-type mat (<s> <t>)
-  (compose-name NIL (type-prefix <t>) 'mat <s>)
+    (compose-name NIL (type-prefix <t>) 'mat <s>)
+  :make-object (case <s>
+                 (n (list (compose-name NIL (type-prefix <t>) 'mat <s>)
+                          '(n m &rest arr)))
+                 (T (list (compose-name NIL (type-prefix <t>) 'mat <s>)
+                          '(&rest arr))))
   (field (compose-name NIL (type-prefix <t>) 'marr <s>)
          :type `(simple-array ,<t> (,(if (integerp <s>) (* <s> <s>) '*)))
          :alias (list 0 'arr))
@@ -77,6 +85,51 @@
 (define-mat-accessor mcols cols)
 (define-mat-accessor mrows rows)
 
+(defmacro define-mat-constructor (size type)
+  (let ((name (compose-name NIL (type-prefix type) 'mat size))
+        (lisp-type (lisp-type (type-instance 'mat-type size type))))
+    (etypecase size
+      ((eql n)
+       `(progn
+          (export '(,name))
+          (define-type-dispatch ,name (n m &rest args)
+            ((dimension dimension) ,lisp-type
+             (,(constructor (type-instance 'mat-type size type))
+              (map-into (make-array (* n m) :element-type ',type :initial-element (,type 0))
+                        #',type args)
+              n m)))))
+      (integer
+       (let ((vec-type (type-instance 'vec-type size type))
+             (args (loop for i from 0 below (* size size) collect (compose-name NIL 'v i))))
+         (flet ((constructor (&rest args)
+                  `(,(constructor (type-instance 'mat-type size type))
+                     ,(if (rest args)
+                          `(v::%vec-array ,(length args) ,type ,@args)
+                          `(map-into (make-array ,(* size size) :element-type ',type)
+                                     #',type ,(first args))))))
+           `(progn
+              (export '(,name))
+              (define-type-dispatch ,name (&optional ,@args)
+                (,(loop repeat (length args) collect 'null) ,lisp-type
+                 ,(apply #'constructor (make-list (length args) :initial-element 0)))
+                (,(loop repeat (length args) collect 'real) ,lisp-type
+                 ,(apply #'constructor args))
+                ((real ,@(loop repeat (1- (length args)) collect 'null)) ,lisp-type
+                 ,(apply #'constructor (make-list (length args) :initial-element (first args))))
+                ((,lisp-type ,@(loop repeat (1- (length args)) collect 'null)) ,lisp-type
+                 (,(compose-name NIL (type-prefix type) 'mat size '-copy) ,(first args)))
+                ((,(compose-name NIL '* (type-prefix type) 'mat size) ,@(loop repeat (1- (length args)) collect 'null)) ,lisp-type
+                 ,(constructor `(marr ,(first args))))
+                ((vector ,@(loop repeat (1- (length args)) collect 'null)) ,lisp-type
+                 ,(constructor (first args)))
+                ((,@(loop repeat size collect (lisp-type vec-type))
+                  ,@(loop repeat (- (length args) size) collect 'null)) ,lisp-type
+                 ,(apply #'constructor (loop for i from 0 below size
+                                             append (loop for arg in args repeat size
+                                                          collect (place-form vec-type i arg)))))))))))))
+
+(do-mat-combinations define-mat-constructor)
+
 ;; [x] matX
 ;; [x] marrX
 ;; [x] matX-copy (autogen is not useful as it does not deep-copy the array)
@@ -91,10 +144,10 @@
 ;; [ ] mat
 ;; [ ] matf
 ;; [x] write-matrix
-;; [ ] with-matrix
 ;; [ ] with-fast-matref
-;; [ ] with-fast-matrefs
-;; [ ] with-fast-matcase
+;; [ ] mzero
+;; [ ] mcopy
+;; [ ] m<-
 
 (defun write-matrix (m stream &key (format :nice))
   (etypecase stream

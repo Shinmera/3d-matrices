@@ -147,6 +147,7 @@
               (incf xi)))
           (incf mi mc))))))
 
+;; FIXME: mat4 x vec3
 (define-template m*v <s> <t> (x m n)
   (when (member <s> '(n)) (template-unfulfillable))
   (let ((type (type-instance 'mat-type <s> <t>))
@@ -435,6 +436,20 @@
         (do-times (i 0 ,(attribute type :len) 1 sum)
           (setf sum (+ sum (expt (aref ma i) 2))))))))
 
+(define-template mdiag <s> <t> (x m)
+  (when (eql <s> 'n) (template-unfulfillable))
+  (let ((type (type-instance 'mat-type <s> <t>))
+        (vtype (type-instance 'vec-type <s> <t>)))
+    `((declare (type ,(lisp-type type) m)
+               (type ,(lisp-type vtype) x)
+               (return-type ,(lisp-type vtype))
+               inline)
+      (let ((ma ,(place-form type 'arr 'm))
+            (xa ,(place-form vtype 'arr 'x)))
+        ,@(loop for i from 0 below <s>
+                collect `(setf (aref xa ,i) (aref ma ,(+ i (* i <s>)))))
+        x))))
+
 ;; [x] mcopy
 ;; [x] mzero meye mrand
 ;; [x] miref
@@ -467,7 +482,7 @@
 ;; [x] m2norm
 ;; [/] meigen
 ;; [/] mblock mcol mrow mswap-row mswap-col
-;; [ ] mdiag
+;; [x] mdiag
 
 (do-mat-combinations define-copy)
 (do-mat-combinations define-aref)
@@ -495,3 +510,4 @@
 (do-mat-combinations define-m1norm)
 (do-mat-combinations define-minorm)
 (do-mat-combinations define-m2norm)
+(do-mat-combinations define-mdiag)
