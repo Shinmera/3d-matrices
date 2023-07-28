@@ -4,7 +4,7 @@
  Author: Nicolas Hafner <shinmera@tymoon.eu>
 |#
 
-(in-package #:org.shirakumo.fraf.matrix)
+(in-package #:org.shirakumo.fraf.matrices)
 
 (defmacro define-2mat-dispatch (op)
   `(define-templated-dispatch ,(compose-name NIL '!2m op) (x a b)
@@ -37,7 +37,6 @@
                 (,2-op target target value)))))
 
      (define-compiler-macro ,name (target value &rest values)
-       (dbg "Expanding compiler macro (~a~{ ~a~})" ',name (list* value values))
        (cond ((null values)
               ,(if 1-op
                    ``(,',1-op ,target ,value)
@@ -66,7 +65,6 @@
                   (setf previous value))))))
 
      (define-compiler-macro ,name (value &rest values)
-       (dbg "Expanding compiler macro (~a~{ ~a~})" ',name (list* value values))
        (cond ((null values)
               ,identity)
              ((null (cdr values))
@@ -83,18 +81,18 @@
 
 (defmacro define-pure-alias (name args &optional (func (compose-name NIL '! name)))
   `(define-alias ,name ,args
-     `(,',func (mzero ,,(first args)) ,,@(lambda-list-variables args))))
+     `(,',func (mzero ,,(first args)) ,,@(v::lambda-list-variables args))))
 
 (defmacro define-modifying-alias (name args &optional (func (compose-name NIL '! name)))
   `(define-alias ,name ,args
-     `(,',func ,,(first args) ,,@(lambda-list-variables args))))
+     `(,',func ,,(first args) ,,@(v::lambda-list-variables args))))
 
 (defmacro define-simple-alias (name args &optional (func (compose-name NIL '! name)))
   `(progn (define-pure-alias ,name ,args ,func)
           (define-modifying-alias ,(compose-name NIL 'n name) ,args ,func)))
 
 (defmacro define-rest-alias (name args &optional (func (compose-name NIL '! name)))
-  (let ((vars (lambda-list-variables args))
+  (let ((vars (v::lambda-list-variables args))
         (nname (compose-name NIL 'n name)))
     `(progn
        (defun ,name ,args
@@ -111,14 +109,65 @@
                               collect `(list ',var ,var)))
             (,',func ,',(first args) ,',@(butlast vars) ,@,(car (last vars))))))))
 
-;; [ ] mcopy
-;; [ ] mzero
+(define-2mat-dispatch +)
+(define-2mat-dispatch -)
+(define-2mat-dispatch *)
+(define-2mat-dispatch /)
+(define-2mat-dispatch min)
+(define-2mat-dispatch max)
+
+(define-matcomp-dispatch =)
+(define-matcomp-dispatch /= or)
+(define-matcomp-dispatch <)
+(define-matcomp-dispatch <=)
+(define-matcomp-dispatch >)
+(define-matcomp-dispatch >=)
+
+(define-1mat-dispatch m<- 1matop identity)
+
+(define-1mat-dispatch !1m- 1matop -)
+(define-1mat-dispatch !1m/ 1matop /)
+
+(define-mat-reductor !m+ !2m+)
+(define-mat-reductor !m* !2m*)
+(define-mat-reductor !m- !2m- !1m-)
+(define-mat-reductor !m/ !2m/ !1m/)
+(define-mat-reductor !mmin !2mmin)
+(define-mat-reductor !mmax !2mmax)
+
+(define-templated-dispatch !mrand (x a var)
+  ((mat-type 0 0) random))
+
+(define-value-reductor m= 2m= and T)
+(define-value-reductor m/= 2m/= and T)
+(define-value-reductor m< 2m< and T)
+(define-value-reductor m<= 2m<= and T)
+(define-value-reductor m> 2m> and T)
+(define-value-reductor m>= 2m>= and T)
+
+(define-templated-dispatch m1norm (a)
+  ((mat-type) m1norm))
+(define-templated-dispatch minorm (a)
+  ((mat-type) m1norm))
+(define-templated-dispatch m2norm (a)
+  ((mat-type) m2norm))
+
+(define-rest-alias m+ (m &rest others))
+(define-rest-alias m- (m &rest others))
+(define-rest-alias m* (m &rest others))
+(define-rest-alias m/ (m &rest others))
+(define-rest-alias mmin (m &rest others))
+(define-rest-alias mmax (m &rest others))
+
+(define-simple-alias mrand (m var))
+
+
+
 ;; [ ] miref
 ;; [ ] mcref
 ;; [ ] msetf
 ;; [ ] meye
 ;; [ ] mrand
-;; [ ] muniform
 ;; [ ] mcol
 ;; [ ] mrow
 ;; [ ] m=
@@ -160,7 +209,6 @@
 ;; [ ] nmtranslate
 ;; [ ] nmscale
 ;; [ ] nmrotate
-;; [ ] nmlookat
 ;; [ ] m1norm
 ;; [ ] minorm
 ;; [ ] m2norm

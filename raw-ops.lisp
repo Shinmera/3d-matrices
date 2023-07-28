@@ -147,9 +147,9 @@
               (incf xi)))
           (incf mi mc))))))
 
-;; FIXME: mat4 x vec3
-(define-template m*v <s> <t> (x m n)
+(define-template m*v <vs> <s> <t> (x m n)
   (when (member <s> '(n)) (template-unfulfillable))
+  (unless (or (eql <s> <vs>) (and (eql <s> 4) (eql <vs> 3))) (template-unfulfillable))
   (let ((type (type-instance 'mat-type <s> <t>))
         (vtype (type-instance 'vec-type <s> <t>)))
     `((declare (type ,(lisp-type type) m)
@@ -158,16 +158,13 @@
       (let ((ma ,(place-form type 'arr 'm))
             (na ,(place-form vtype 'arr 'n))
             (xa ,(place-form vtype 'arr 'x))
-            (mc ,(attribute type :cols 'm))
             (mi 0))
-        (do-times (xy 0 ,(attribute type :rows 'm) 1 x)
-          (let ((c (,<t> 0))
-                (mi mi))
-            (do-times (xx 0 ,(attribute type :cols 'm) 1)
+        (do-times (xy 0 ,<vs> 1 x)
+          (let ((c (,<t> 0)))
+            (do-times (xx 0 ,<s> 1)
               (setf c (,<t> (+ c (* (aref ma mi) (aref na xx))))))
             (setf (aref xa xy) c)
-            (incf mi 1))
-          (incf mi mc))))))
+            (incf mi 1)))))))
 
 (define-template mdet <s> <t> (m)
   (let ((type (type-instance 'mat-type <s> <t>)))
@@ -480,7 +477,7 @@
 ;; [x] m1norm
 ;; [x] minorm
 ;; [x] m2norm
-;; [/] meigen
+;; [ ] meigen
 ;; [/] mblock mcol mrow mswap-row mswap-col
 ;; [x] mdiag
 
@@ -495,7 +492,7 @@
 (do-mat-combinations define-smatreduce (or) (/=) (<t> real) boolean)
 (do-mat-combinations define-0matop (zero eye rand))
 (do-mat-combinations define-m*m)
-(do-mat-combinations define-m*v)
+(do-mat-combinations define-m*v (2 3 4))
 (do-mat-combinations define-mdet)
 (do-mat-combinations define-minv-affine)
 (do-mat-combinations define-mtranspose)

@@ -19,6 +19,7 @@
                (:file "toolkit")
                (:file "types")
                (:file "raw-ops")
+               (:file "ops")
                (:file "documentation"))
   :depends-on (:documentation-utils
                :3d-vectors)
