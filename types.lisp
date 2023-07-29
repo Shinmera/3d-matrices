@@ -118,7 +118,7 @@
                  ,(apply #'constructor (make-list (length args) :initial-element (first args))))
                 ((,lisp-type ,@(loop repeat (1- (length args)) collect 'null)) ,lisp-type
                  (,(compose-name NIL (type-prefix type) 'mat size '-copy) ,(first args)))
-                ((,(compose-name NIL '* (type-prefix type) 'mat size) ,@(loop repeat (1- (length args)) collect 'null)) ,lisp-type
+                ((,(compose-name NIL '* 'mat size) ,@(loop repeat (1- (length args)) collect 'null)) ,lisp-type
                  ,(constructor `(marr ,(first args))))
                 ((vector ,@(loop repeat (1- (length args)) collect 'null)) ,lisp-type
                  ,(constructor (first args)))
