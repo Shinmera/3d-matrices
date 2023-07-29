@@ -6,6 +6,14 @@
 
 (in-package #:org.shirakumo.fraf.matrices)
 
+(define-template mvec <s> <t> (m)
+  (when (eql <s> 'n) (template-unfulfillable))
+  (let ((type (type-instance 'vec-type <s> <t>)))
+    `((declare (ignore m)
+               (return-type ,(lisp-type type))
+               inline)
+      (,(lisp-type type)))))
+
 (define-template copy <s> <t> (m)
   (let ((type (type-instance 'mat-type <s> <t>)))
     `((declare (type ,(lisp-type type) m)
@@ -465,6 +473,7 @@
                 collect `(setf (aref xa ,i) (aref ma ,(+ i (* i <s>)))))
         x))))
 
+(do-mat-combinations define-mvec)
 (do-mat-combinations define-copy)
 (do-mat-combinations define-aref)
 (do-mat-combinations define-cref)

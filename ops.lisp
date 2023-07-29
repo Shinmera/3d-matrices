@@ -158,6 +158,9 @@
 (define-matcomp-dispatch >)
 (define-matcomp-dispatch >=)
 
+(define-templated-dispatch mvec (a)
+  ((mat-type) mvec))
+
 (define-1mat-dispatch m<- 1matop identity)
 
 (define-1mat-dispatch !1m- 1matop -)
