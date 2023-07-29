@@ -151,7 +151,7 @@
   (when (member <s> '(n)) (template-unfulfillable))
   (unless (or (eql <s> <vs>) (and (eql <s> 4) (eql <vs> 3))) (template-unfulfillable))
   (let ((type (type-instance 'mat-type <s> <t>))
-        (vtype (type-instance 'vec-type <s> <t>)))
+        (vtype (type-instance 'vec-type <vs> <t>)))
     `((declare (type ,(lisp-type type) m)
                (type ,(lisp-type vtype) x n)
                (return-type ,(lisp-type vtype)))
@@ -161,10 +161,13 @@
             (mi 0))
         (do-times (xy 0 ,<vs> 1 x)
           (let ((c (,<t> 0)))
-            (do-times (xx 0 ,<s> 1)
-              (setf c (,<t> (+ c (* (aref ma mi) (aref na xx))))))
-            (setf (aref xa xy) c)
-            (incf mi 1)))))))
+            ,@(loop for xx from 0 below <vs>
+                    collect `(setf c (,<t> (+ c (* (aref ma mi) (aref na ,xx)))))
+                    collect `(incf mi 1))
+            ,@(loop for xx from <vs> below <s>
+                    collect `(setf c (,<t> (+ c (aref ma mi))))
+                    collect `(incf mi 1))
+            (setf (aref xa xy) c)))))))
 
 (define-template mdet <s> <t> (m)
   (let ((type (type-instance 'mat-type <s> <t>)))
