@@ -111,10 +111,26 @@
 
 (define-2mat-dispatch +)
 (define-2mat-dispatch -)
-(define-2mat-dispatch *)
 (define-2mat-dispatch /)
 (define-2mat-dispatch min)
 (define-2mat-dispatch max)
+
+(defmacro define-2mat-*-dispatch ()
+  `(define-templated-dispatch !2m* (x a b)
+     ((mat-type 0 #(0 1)) smatop * <t>)
+     ((mat-type 0 real) smatop * real)
+     ((mat-type 0 0) 2matop *)
+     ,@(loop for instance in (instances 'mat-type)
+             for (<s> <t>) = (template-arguments instance)
+             for vec-type = (ignore-errors (type-instance 'vec-type <s> <t>))
+             when vec-type
+             collect `((,(lisp-type vec-type) ,(lisp-type instance) 0)
+                       m*v ,<s> ,<s> ,<t>)
+             when (eql <s> 4)
+             collect `((,(lisp-type (type-instance 'vec-type 3 <t>)) ,(lisp-type instance) 0)
+                       m*v 3 ,<s> ,<t>))))
+
+(define-2mat-*-dispatch)
 
 (define-matcomp-dispatch =)
 (define-matcomp-dispatch /= or)
