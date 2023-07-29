@@ -390,6 +390,18 @@
          0                    0                    '(- (/ (+ f n) (- f n))) '(/ (* -2 f n) (- f n))
          0                    0                    -1                       0)))
 
+(define-template mperspective <s> <t> (x fovy aspect near far)
+  (unless (eql <s> 4) (template-unfulfillable))
+  (when (member <t> '(i32 u32)) (template-unfulfillable))
+  (let ((type (type-instance 'mat-type <s> <t>)))
+    `((declare (type ,(lisp-type type) x)
+               (type ,<t> fovy aspect near far)
+               (return-type ,(lisp-type type))
+               inline)
+      (let* ((fh (* (the ,<t> (tan (* (/ fovy (,<t> 360)) (,<t> PI)))) near))
+             (fw (* fh aspect)))
+        (,(compose-name #\/ 'mfrustum <s> <t>) x (- fw) fw (- fh) fh near far)))))
+
 (define-generation-template mortho (x l r b u n f)
   (unless (eql <s> 4) (template-unfulfillable))
   (when (member <t> '(i32 u32)) (template-unfulfillable))
@@ -453,40 +465,6 @@
                 collect `(setf (aref xa ,i) (aref ma ,(+ i (* i <s>)))))
         x))))
 
-;; [x] mcopy
-;; [x] mzero meye mrand
-;; [x] miref
-;; [x] mcref
-;; [x] msetf
-;; [x] m= m~= m/= m< m> m<= m>=
-;; [x] m+ m- m/
-;; [x] m*
-;; [x] mdet
-;; [x] mtranspose
-;; [x] mtrace
-;; [ ] minv
-;; [x] minv-affine
-;; [ ] mminor
-;; [ ] mcofactor
-;; [ ] mcof
-;; [ ] madj
-;; [ ] mpivot
-;; [ ] mlu
-;; [ ] mqr
-;; [x] mtranslation
-;; [x] mscaling
-;; [x] mrotation
-;; [x] mlookat
-;; [x] mfrustum
-;; [x] mortho
-;; [/] mperspective
-;; [x] m1norm
-;; [x] minorm
-;; [x] m2norm
-;; [ ] meigen
-;; [/] mblock mcol mrow mswap-row mswap-col
-;; [x] mdiag
-
 (do-mat-combinations define-copy)
 (do-mat-combinations define-aref)
 (do-mat-combinations define-cref)
@@ -509,6 +487,7 @@
 (do-mat-combinations define-mrotation)
 (do-mat-combinations define-mlookat)
 (do-mat-combinations define-mfrustum)
+(do-mat-combinations define-mperspective)
 (do-mat-combinations define-mortho)
 (do-mat-combinations define-m1norm)
 (do-mat-combinations define-minorm)

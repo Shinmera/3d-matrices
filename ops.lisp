@@ -133,6 +133,15 @@
      (((eql 4)) mat4 (,initializer (mat4)))
      ((integer) matn (,initializer (matn x x)))))
 
+(defmacro define-vec-return (name args)
+  (let ((nname (compose-name NIL 'n name)))
+    `(progn
+       (define-templated-dispatch ,nname (x ,@(mapcar #'first args))
+         ((#'(matching-vec 1) ,@(mapcar #'second args)) ,name))
+       
+       (define-templated-dispatch ,name ,(mapcar #'first args)
+         (,(mapcar #'second args) (,name) (mvec ,(first (first args))) ,@(mapcar #'first args))))))
+
 (define-2mat-dispatch +)
 (define-2mat-dispatch -)
 (define-2mat-dispatch /)
@@ -210,6 +219,8 @@
 (define-compiler-macro n*m (&rest others)
   `(!m* ,(car (last others)) ,@others))
 
+(define-vec-return mdiag ((m mat-type)))
+
 (define-templated-dispatch nmtranslation (x v)
   ((mat-type #'(matching-vec 0)) mtranslation))
 (define-templated-dispatch nmscaling (x v)
@@ -220,8 +231,12 @@
   ((mat-type #'(matching-vec 0) 1 1) mlookat))
 (define-templated-dispatch nmfrustum (x l r b u n f)
   ((mat-type #(0 1) 1 1 1 1 1 1) mfrustum))
+(define-templated-dispatch nmperspective (x fovy aspect n f)
+  ((mat-type #(0 1) 1 1 1) mperspective))
 (define-templated-dispatch nmortho (x l r b u n f)
   ((mat-type #(0 1) 1 1 1 1 1 1) mortho))
+(define-templated-dispatch nmperspective (x fovy aspect near far)
+  ((mat-type #(0 1) 1 1 1) mperspective))
 
 (define-type-dispatch mtranslation (v)
   #-3d-vectors-no-f32 ((vec2) mat3 (mtranslation/3/f32 (mat3) v))
@@ -257,6 +272,10 @@
   #-3d-vectors-no-f32 ((f32 f32 f32 f32 f32 f32) mat4 (mfrustum/4/f32 (mat4) l r b u n f))
   #-3d-vectors-no-f64 ((f64 f64 f64 f64 f64 f64) dmat4 (mfrustum/4/f64 (dmat4) l r b u n f)))
 
+(define-type-dispatch mperspective (fovy aspect n f)
+  #-3d-vectors-no-f32 ((f32 f32 f32 f32) mat4 (mperspective/4/f32 (mat4) fovy aspect n f))
+  #-3d-vectors-no-f64 ((f64 f64 f64 f64) dmat4 (mperspective/4/f64 (dmat4) fovy aspect n f)))
+
 (define-type-dispatch mortho (l r b u n f)
   #-3d-vectors-no-f32 ((f32 f32 f32 f32 f32 f32) mat4 (mortho/4/f32 (mat4) l r b u n f))
   #-3d-vectors-no-f64 ((f64 f64 f64 f64 f64 f64) dmat4 (mortho/4/f64 (dmat4) l r b u n f)))
@@ -265,14 +284,10 @@
 (define-constructor mrand !mrand)
 (define-constructor mzero !mzero)
 
-;; [ ] miref
-;; [ ] mcref
-;; [ ] msetf
 ;; [x] meye
 ;; [x] mrand
 ;; [x] mzero
-;; [ ] mcol
-;; [ ] mrow
+;; [ ] mvec
 ;; [x] m=
 ;; [x] m~=
 ;; [x] m/=
@@ -289,10 +304,9 @@
 ;; [x] n*m
 ;; [x] m/
 ;; [x] nm/
-;; [ ] mapply
-;; [ ] mapplyf
 ;; [x] mdet
 ;; [ ] minv
+;; [x] minv-affine
 ;; [x] mtranspose
 ;; [x] nmtranspose
 ;; [x] mtrace
@@ -302,24 +316,31 @@
 ;; [ ] madj
 ;; [ ] mpivot
 ;; [ ] mlu
+;; [ ] mqr
+;; [ ] meigen
 ;; [x] mrotation
 ;; [x] mscaling
 ;; [x] mrotation
 ;; [x] mlookat
 ;; [x] mfrustum
 ;; [x] mortho
-;; [ ] mperspective
+;; [x] mperspective
 ;; [ ] nmtranslate
 ;; [ ] nmscale
 ;; [ ] nmrotate
 ;; [x] m1norm
 ;; [x] minorm
 ;; [x] m2norm
-;; [ ] mqr
-;; [ ] meigen
 ;; [ ] nmswap-row
 ;; [ ] nmswap-col
-;; [ ] mdiag
+;; [x] mdiag
+;; [ ] miref
+;; [ ] mcref
+;; [ ] msetf
+;; [ ] mcol
+;; [ ] mrow
+;; [ ] mapply
+;; [ ] mapplyf
 ;; [ ] mblock
 ;; [ ] mtop
 ;; [ ] mbottom
