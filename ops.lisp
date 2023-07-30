@@ -142,6 +142,15 @@
        (define-templated-dispatch ,name ,(mapcar #'first args)
          (,(mapcar #'second args) (,name) (mvec ,(first (first args))) ,@(mapcar #'first args))))))
 
+(define-dependent-dispatch-type matching-vec (types i ref)
+  (handler-case (apply #'type-instance 'vec-type (template-arguments (nth ref types)))
+    (error () NIL)))
+
+(define-dependent-dispatch-type lower-vec (types i ref)
+  (handler-case (multiple-value-bind (<s> <t>) (template-arguments (nth ref types))
+                  (apply #'type-instance 'vec-type (1- <s>) <t>))
+    (error () NIL)))
+
 (define-2mat-dispatch +)
 (define-2mat-dispatch -)
 (define-2mat-dispatch /)
@@ -160,6 +169,9 @@
 
 (define-templated-dispatch mvec (a)
   ((mat-type) mvec))
+
+(define-templated-dispatch mcopy (a)
+  ((mat-type) copy))
 
 (define-1mat-dispatch m<- 1matop identity)
 
@@ -182,10 +194,6 @@
   ((mat-type) 0matop eye))
 (define-templated-dispatch !mrand (x)
   ((mat-type) 0matop rand))
-
-(define-dependent-dispatch-type matching-vec (types i ref)
-  (handler-case (apply #'type-instance 'vec-type (template-arguments (nth ref types)))
-    (error () NIL)))
 
 (define-value-reductor m= 2m= and T)
 (define-value-reductor m~= 2m~= and T)
@@ -224,6 +232,13 @@
 
 (define-templated-dispatch mdiag (mat)
   ((mat-type) mdiag))
+
+(define-templated-dispatch nmtranslate (x v)
+  ((mat-type #'(lower-vec 0)) mtranslate))
+(define-templated-dispatch nmscale (x v)
+  ((mat-type #'(lower-vec 0)) mscale))
+(define-templated-dispatch nmrotate (x v angle)
+  ((mat-type #'(lower-vec 0) #(0 1)) mrotate))
 
 (define-templated-dispatch nmtranslation (x v)
   ((mat-type #'(matching-vec 0)) mtranslation))
@@ -423,7 +438,8 @@
 ;; [x] meye
 ;; [x] mrand
 ;; [x] mzero
-;; [ ] mvec
+;; [x] mcopy
+;; [x] mvec
 ;; [x] m=
 ;; [x] m~=
 ;; [x] m/=
@@ -461,9 +477,9 @@
 ;; [x] mfrustum
 ;; [x] mortho
 ;; [x] mperspective
-;; [ ] nmtranslate
-;; [ ] nmscale
-;; [ ] nmrotate
+;; [x] nmtranslate
+;; [x] nmscale
+;; [x] nmrotate
 ;; [x] m1norm
 ;; [x] minorm
 ;; [x] m2norm
