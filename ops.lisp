@@ -435,6 +435,60 @@
                (setf R Rn)))
     (mdiag (nm* R Q))))
 
+(declaim (ftype (function (*mat dimension dimension) T) mminor))
+(defun mminor (m y x)
+  (let* ((c (mcols m))
+         (r (mrows m))
+         (s (matn (1- r) (1- c)))
+         (sa (marr s))
+         (ma (marr m)))
+    (macrolet ((s (y x) `(aref sa (+ ,x (* ,y (1- c)))))
+               (m (y x) `(aref ma (+ ,x (* ,y c)))))
+      ;; Copy the four subregions
+      (loop for i from 0 below y
+            do (loop for j from 0 below x
+                     do (setf (s i j) (m i j)))
+               (loop for j from (1+ x) below c
+                     do (setf (s i (1- j)) (m i j))))
+      (loop for i from (1+ y) below r
+            do (loop for j from 0 below x
+                     do (setf (s (1- i) j) (m i j)))
+               (loop for j from (1+ x) below c
+                     do (setf (s (1- i) (1- j)) (m i j))))
+      (mdet s))))
+
+(define-alias mcofactor (m y x)
+  `(* (if (evenp (+ ,y ,x)) 1 -1)
+      (mminor ,m ,y ,x)))
+
+(declaim (ftype (function (mat) mat) mcof))
+(defun mcof (m)
+  (let* ((r (mzero m))
+         (ra (marr r))
+         (c (mcols r)))
+    (dotimes (y (mrows m) r)
+      (dotimes (x c)
+        (setf (aref ra (+ x (* y c))) (mcofactor m y x))))))
+
+(define-alias madj (m)
+  `(nmtranspose (mcof ,m)))
+
+(define-alias mcref (m y x)
+  (let ((mg (gensym "M")))
+    `(let ((,mg ,m))
+       (aref (marr ,mg) (+ ,x (* ,y (mcols ,mg)))))))
+
+(define-alias (setf mcref) (value m y x)
+  (let ((mg (gensym "M")))
+    `(let ((,mg ,m))
+       (setf (aref (marr ,mg) (+ ,x (* ,y (mcols ,mg)))) ,value))))
+
+(define-alias miref (m i)
+  `(aref (marr ,m) ,i))
+
+(define-alias (setf miref) (value m i)
+  `(setf (aref (marr ,m) ,i) ,value))
+
 ;; [x] meye
 ;; [x] mrand
 ;; [x] mzero
@@ -462,10 +516,10 @@
 ;; [x] mtranspose
 ;; [x] nmtranspose
 ;; [x] mtrace
-;; [ ] mminor
-;; [ ] mcofactor
-;; [ ] mcof
-;; [ ] madj
+;; [x] mminor
+;; [x] mcofactor
+;; [x] mcof
+;; [x] madj
 ;; [x] mpivot
 ;; [x] mlu
 ;; [x] mqr
@@ -486,8 +540,8 @@
 ;; [ ] nmswap-row
 ;; [ ] nmswap-col
 ;; [x] mdiag
-;; [ ] miref
-;; [ ] mcref
+;; [x] miref
+;; [x] mcref
 ;; [ ] msetf
 ;; [ ] mcol
 ;; [ ] mrow
