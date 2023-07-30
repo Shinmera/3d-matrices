@@ -222,7 +222,8 @@
 (define-compiler-macro n*m (&rest others)
   `(!m* ,(car (last others)) ,@others))
 
-(define-vec-return mdiag ((m mat-type)))
+(define-templated-dispatch mdiag (mat)
+  ((mat-type) mdiag))
 
 (define-templated-dispatch nmtranslation (x v)
   ((mat-type #'(matching-vec 0)) mtranslation))
@@ -287,6 +288,138 @@
 (define-constructor mrand !mrand)
 (define-constructor mzero !mzero)
 
+(declaim (ftype (function (*mat) (values *mat *mat mat-dim &optional)) mpivot))
+(defun mpivot (m)
+  (assert (= (mrows m) (mcols m)))
+  (let* ((c (mrows m))
+         (r (mcopy m))
+         (ra (marr r))
+         (p (meye c))
+         (s 0))
+    (declare (type mat-dim s))
+    (macrolet ((e (y x) `(aref ra (+ ,x (* ,y c)))))
+      (dotimes (i c (values r p s))
+        (let ((index 0) (max 0))
+          (loop for j from i below c
+                for el = (abs (e j i))
+                do (when (< max el)
+                     ;; Make sure we don't accidentally introduce zeroes
+                     ;; into the diagonal by swapping!
+                     (when (/= 0 (e i j))
+                       (setf max el)
+                       (setf index j))))
+          (when (= 0 max)
+            (error "The matrix~%~a~%is singular in column ~a. A pivot cannot be constructed for it."
+                   (write-matrix m NIL) i))
+          ;; Non-diagonal means we swap. Record.
+          (when (/= i index)
+            (setf s (1+ s))
+            (nmswap-row p i index)
+            (nmswap-row r i index)))))))
+
+(declaim (ftype (function (*mat &optional boolean) (values *mat *mat dimension &optional)) mlu))
+(defun mlu (m &optional (pivot T))
+  ;; We're using the Crout method for LU decomposition.
+  ;; See https://en.wikipedia.org/wiki/Crout_matrix_decomposition
+  (let* ((lu (mcopy m))
+         (n (mcols m))
+         (p (meye n))
+         (s 0)
+         (lua (marr lu))
+         (scale (make-array n :element-type (array-element-type (marr m)))))
+    (declare (type mat-dim s))
+    (macrolet ((lu (y x) `(aref lua (+ ,x (* ,y n)))))
+      ;; Discover the largest element and save the scaling.
+      (loop for i from 0 below n
+            for big = 0
+            do (loop for j from 0 below n
+                     for temp = (abs (lu i j))
+                     do (if (< big temp) (setf big temp)))
+               (when (= 0 big)
+                 (error "The matrix is singular in ~a:~%~a" i
+                        (write-matrix lu NIL)))
+               (setf (aref scale i) big))
+      ;; Time to Crout it up.
+      (dotimes (j n (values lu p s))
+        ;; Part A sans diag
+        (loop for i from 0 below j
+              for sum = (lu i j)
+              do (loop for k from 0 below i
+                       do (decf sum (* (lu i k) (lu k j))))
+                 (setf (lu i j) sum))
+        (let ((imax j))
+          ;; Diag + pivot search
+          (loop with big = 0
+                for i from j below n
+                for sum = (lu i j)
+                do (loop for k from 0 below j
+                         do (decf sum (* (lu i k) (lu k j))))
+                   (setf (lu i j) sum)
+                   (when pivot
+                     (let ((temp (* (abs sum) (aref scale i))))
+                       (when (<= big temp)
+                         (setf big temp)
+                         (setf imax i)))))
+          ;; Pivot swap
+          (unless (= j imax)
+            (incf s)
+            (nmswap-row lu imax j)
+            (nmswap-row p  imax j)
+            (setf (aref scale imax) (aref scale j)))
+          ;; Division
+          (when (< j (1- n))
+            (let ((div (/ (lu j j))))
+              (loop for i from (1+ j) below n
+                    do (setf (lu i j) (* (lu i j) div))))))))))
+
+(declaim (ftype (function (*mat) (values *mat *mat &optional)) mqr))
+(defun mqr (mat)
+  (let* ((m (mrows mat))
+         (n (mcols mat))
+         (Q (meye m))
+         (R (mcopy mat))
+         (G (meye m))
+         (ra (marr r))
+         (ga (marr g)))
+    (macrolet ((g (y x) `(aref ga (+ ,x (* ,y m))))
+               (r (y x) `(aref ra (+ ,x (* ,y m)))))
+      (dotimes (j n (values Q R))
+        (loop for i downfrom (1- m) above j
+              for a = (r (1- i) j)
+              for b = (r     i  j)
+              for c = 0
+              for s = 0
+              do (cond ((= 0 b) (setf c 1))
+                       ((= 0 a) (setf s 1))
+                       ((< (abs a) (abs b))
+                        (let ((r (/ a b)))
+                          (setf s (/ (sqrt (1+ (* r r)))))
+                          (setf c (* s r))))
+                       (T
+                        (let ((r (/ b a)))
+                          (setf c (/ (sqrt (1+ (* r r)))))
+                          (setf s (* c r)))))
+                 (setf (g (1- i) (1- i)) c
+                       (g (1- i)     i)  (- s)
+                       (g     i  (1- i)) s
+                       (g     i      i)  c)
+                 (n*m (mtranspose G) R)
+                 (nm* Q G)
+                 (setf (g (1- i) (1- i)) 1
+                       (g (1- i)     i)  0
+                       (g     i  (1- i)) 0
+                       (g     i      i)  1))))))
+
+(declaim (ftype (function (*mat &optional (integer 0)) (values simple-array &optional)) meigen))
+(defun meigen (m &optional (iterations 50))
+  (multiple-value-bind (Q R) (mqr m)
+    (loop repeat iterations
+          do (multiple-value-bind (Qn Rn)
+                 (mqr (nm* R Q))
+               (setf Q Qn)
+               (setf R Rn)))
+    (mdiag (nm* R Q))))
+
 ;; [x] meye
 ;; [x] mrand
 ;; [x] mzero
@@ -317,10 +450,10 @@
 ;; [ ] mcofactor
 ;; [ ] mcof
 ;; [ ] madj
-;; [ ] mpivot
-;; [ ] mlu
-;; [ ] mqr
-;; [ ] meigen
+;; [x] mpivot
+;; [x] mlu
+;; [x] mqr
+;; [x] meigen
 ;; [x] mrotation
 ;; [x] mscaling
 ;; [x] mrotation
