@@ -147,9 +147,14 @@
     (error () NIL)))
 
 (define-dependent-dispatch-type lower-vec (types i ref)
-  (handler-case (multiple-value-bind (<s> <t>) (template-arguments (nth ref types))
+  (handler-case (destructuring-bind (<s> <t>) (template-arguments (nth ref types))
                   (apply #'type-instance 'vec-type (1- <s>) <t>))
     (error () NIL)))
+
+(define-dependent-dispatch-type matching-array (types i ref)
+  (destructuring-bind (<s> <t>) (template-arguments (nth ref types))
+    (declare (ignore <s>))
+    `(simple-array ,<t> (*))))
 
 (define-2mat-dispatch +)
 (define-2mat-dispatch -)
@@ -178,8 +183,28 @@
 (define-1mat-dispatch !1m- 1matop -)
 (define-1mat-dispatch !1m/ 1matop /)
 
+(define-templated-dispatch !mapply (x m f)
+  ((mat-type 0 function) mapply)
+  ((mat-type 0 symbol) (mapply) x m (fdefinition f)))
+
 (define-1mat-dispatch !minv-affine minv-affine)
 (define-1mat-dispatch !mtranspose mtranspose)
+(define-templated-dispatch !mswap-row (x m r1 r2)
+  ((mat-type 0 dimension dimension) mswap-row))
+(define-templated-dispatch !mswap-col (x m c1 c2)
+  ((mat-type 0 dimension dimension) mswap-col))
+(define-templated-dispatch !mrow (r m ri)
+  ((#'(matching-array 1) mat-type dimension) mrow)
+  ((#'(matching-vec 1) mat-type dimension) (mrow) (varr r) m ri)
+  ((null mat-type dimension) (mrow) (make-array (mcols m) :element-type (array-element-type (marr m))) m ri))
+(define-templated-dispatch !mcol (r m ci)
+  ((#'(matching-array 1) mat-type dimension) mcol)
+  ((#'(matching-vec 1) mat-type dimension) (mcol) (varr r) m ci)
+  ((null mat-type dimension) (mcol) (make-array (mrows m) :element-type (array-element-type (marr m))) m ci))
+(define-templated-dispatch !mdiag (r m)
+  ((#'(matching-array 1) mat-type) mdiag)
+  ((#'(matching-vec 1) mat-type) (mdiag) (varr r) m)
+  ((null mat-type dimension) (mdiag) (make-array (min (mcols m) (mrows m)) :element-type (array-element-type (marr m))) m))
 
 (define-mat-reductor !m+ !2m+)
 (define-mat-reductor !m* !2m*)
@@ -203,8 +228,15 @@
 (define-value-reductor m> 2m> and T)
 (define-value-reductor m>= 2m>= and T)
 
+(define-pure-alias mapply (m f) !mapply)
+(define-modifying-alias mapplyf (m f) !mapply)
 (define-simple-alias minv-affine (m))
 (define-simple-alias mtranspose (m))
+(define-simple-alias mswap-row (m r1 r2))
+(define-simple-alias mswap-col (m c1 c2))
+(define-alias mrow (m ri) `(!mrow NIL ,m ,ri))
+(define-alias mcol (m ri) `(!mcol NIL ,m ,ri))
+(define-alias mdiag (m) `(!mdiag NIL ,m))
 
 (define-templated-dispatch mdet (m)
   ((mat-type) mdet))
@@ -229,9 +261,6 @@
 
 (define-compiler-macro n*m (&rest others)
   `(!m* ,(car (last others)) ,@others))
-
-(define-templated-dispatch mdiag (mat)
-  ((mat-type) mdiag))
 
 (define-templated-dispatch nmtranslate (x v)
   ((mat-type #'(lower-vec 0)) mtranslate))
@@ -489,6 +518,18 @@
 (define-alias (setf miref) (value m i)
   `(setf (aref (marr ,m) ,i) ,value))
 
+(defmacro msetf (mat &rest els)
+  (let ((m (gensym "MAT"))
+        (arr (gensym "ARR")))
+    `(let* ((,m ,mat)
+            (,arr (marr ,m)))
+       (psetf
+        ,@(loop for el in els
+                for i from 0
+                collect `(aref ,arr ,i)
+                collect `(ensure-float ,el)))
+       ,m)))
+
 ;; [x] meye
 ;; [x] mrand
 ;; [x] mzero
@@ -537,18 +578,13 @@
 ;; [x] m1norm
 ;; [x] minorm
 ;; [x] m2norm
-;; [ ] nmswap-row
-;; [ ] nmswap-col
+;; [x] nmswap-row
+;; [x] nmswap-col
 ;; [x] mdiag
 ;; [x] miref
 ;; [x] mcref
-;; [ ] msetf
-;; [ ] mcol
-;; [ ] mrow
-;; [ ] mapply
-;; [ ] mapplyf
-;; [ ] mblock
-;; [ ] mtop
-;; [ ] mbottom
-;; [ ] mleft
-;; [ ] mright
+;; [x] msetf
+;; [x] mcol
+;; [x] mrow
+;; [x] mapply
+;; [x] mapplyf
