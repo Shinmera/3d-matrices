@@ -183,25 +183,6 @@
    #-3d-vectors-no-u32 u32
    #-3d-vectors-no-i32 i32))
 
-;; [x] matX
-;; [x] marrX
-;; [x] matX-copy (autogen is not useful as it does not deep-copy the array)
-;; [x] matX-p
-;; [x] mirefX
-;; [x] mcrefX
-;; [x] mat (type)
-;; [x] mat-p
-;; [x] marr
-;; [x] mcols
-;; [x] mrows
-;; [x] mat
-;; [ ] matf
-;; [x] write-matrix
-;; [ ] with-fast-matref
-;; [ ] mzero
-;; [ ] mcopy
-;; [ ] m<-
-
 (defun write-matrix (m stream &key (format :nice))
   (etypecase stream
     (null (with-output-to-string (out)
@@ -246,5 +227,13 @@
           (write-string ")" stream)
           (unless (= i (1- (mrows m)))
             (write-string " " stream)))
-        (write-string ")" stream)))
+        (write-string ")" stream))
+       (:c
+        (write-string "{")
+        (dotimes (i (mrows m))
+          (dotimes (j (mcols m))
+            (format stream "~f~:[, ~;~]" (mcref m i j) (= j (1- (mcols m)))))
+          (unless (= i (1- (mrows m)))
+            (format stream ",~% ")))
+        (write-string "}")))
      m)))

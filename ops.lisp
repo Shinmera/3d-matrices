@@ -510,3 +510,16 @@
                 collect `(aref ,arr ,i)
                 collect `(ensure-float ,el)))
        ,m)))
+
+(defmacro with-fast-matref ((accessor mat width) &body body)
+  (let ((w (gensym "WIDTH")) (arr (gensym "ARRAY"))
+        (x (gensym "X")) (y (gensym "Y")))
+    `(let ((,w ,width)
+           (,arr (marr ,mat)))
+       (declare (ignorable ,w))
+       (macrolet ((,accessor (,y &optional ,x)
+                    `(the ,*float-type*
+                          (aref ,',arr ,(if ,x
+                                            `(+ ,,x (* ,,y ,',(if (constantp width) width w)))
+                                            ,y)))))
+         ,@body))))
