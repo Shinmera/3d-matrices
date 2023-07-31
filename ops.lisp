@@ -187,6 +187,8 @@
   ((mat-type 0 function) mapply)
   ((mat-type 0 symbol) (mapply) x m (fdefinition f)))
 
+(define-1mat-dispatch !mcof mcof)
+(define-1mat-dispatch !minv minv)
 (define-1mat-dispatch !minv-affine minv-affine)
 (define-1mat-dispatch !mtranspose mtranspose)
 (define-templated-dispatch !mswap-row (x m r1 r2)
@@ -230,6 +232,8 @@
 
 (define-pure-alias mapply (m f) !mapply)
 (define-modifying-alias mapplyf (m f) !mapply)
+(define-simple-alias mcof (m))
+(define-simple-alias minv (m))
 (define-simple-alias minv-affine (m))
 (define-simple-alias mtranspose (m))
 (define-simple-alias mswap-row (m r1 r2))
@@ -238,6 +242,8 @@
 (define-alias mcol (m ri) `(!mcol NIL ,m ,ri))
 (define-alias mdiag (m) `(!mdiag NIL ,m))
 
+(define-templated-dispatch mminor (m y x)
+  ((mat-type dimension dimension) mminor))
 (define-templated-dispatch mdet (m)
   ((mat-type) mdet))
 (define-templated-dispatch mtrace (m)
@@ -464,40 +470,15 @@
                (setf R Rn)))
     (mdiag (nm* R Q))))
 
-(declaim (ftype (function (*mat dimension dimension) T) mminor))
-(defun mminor (m y x)
-  (let* ((c (mcols m))
-         (r (mrows m))
-         (s (matn (1- r) (1- c)))
-         (sa (marr s))
-         (ma (marr m)))
-    (macrolet ((s (y x) `(aref sa (+ ,x (* ,y (1- c)))))
-               (m (y x) `(aref ma (+ ,x (* ,y c)))))
-      ;; Copy the four subregions
-      (loop for i from 0 below y
-            do (loop for j from 0 below x
-                     do (setf (s i j) (m i j)))
-               (loop for j from (1+ x) below c
-                     do (setf (s i (1- j)) (m i j))))
-      (loop for i from (1+ y) below r
-            do (loop for j from 0 below x
-                     do (setf (s (1- i) j) (m i j)))
-               (loop for j from (1+ x) below c
-                     do (setf (s (1- i) (1- j)) (m i j))))
-      (mdet s))))
-
 (define-alias mcofactor (m y x)
   `(* (if (evenp (+ ,y ,x)) 1 -1)
       (mminor ,m ,y ,x)))
 
-(declaim (ftype (function (mat) mat) mcof))
-(defun mcof (m)
-  (let* ((r (mzero m))
-         (ra (marr r))
-         (c (mcols r)))
-    (dotimes (y (mrows m) r)
-      (dotimes (x c)
-        (setf (aref ra (+ x (* y c))) (mcofactor m y x))))))
+(define-alias !madj (r m)
+  `(nmtranspose (!mcof ,r ,m)))
+
+(define-alias mcof (m)
+  `(!mcof (mzero ,m) ,m))
 
 (define-alias madj (m)
   `(nmtranspose (mcof ,m)))
@@ -529,62 +510,3 @@
                 collect `(aref ,arr ,i)
                 collect `(ensure-float ,el)))
        ,m)))
-
-;; [x] meye
-;; [x] mrand
-;; [x] mzero
-;; [x] mcopy
-;; [x] mvec
-;; [x] m=
-;; [x] m~=
-;; [x] m/=
-;; [x] m<
-;; [x] m>
-;; [x] m<=
-;; [x] m>=
-;; [x] m+
-;; [x] nm+
-;; [x] m-
-;; [x] nm-
-;; [x] m*
-;; [x] nm*
-;; [x] n*m
-;; [x] m/
-;; [x] nm/
-;; [x] mdet
-;; [ ] minv
-;; [x] minv-affine
-;; [x] mtranspose
-;; [x] nmtranspose
-;; [x] mtrace
-;; [x] mminor
-;; [x] mcofactor
-;; [x] mcof
-;; [x] madj
-;; [x] mpivot
-;; [x] mlu
-;; [x] mqr
-;; [x] meigen
-;; [x] mrotation
-;; [x] mscaling
-;; [x] mrotation
-;; [x] mlookat
-;; [x] mfrustum
-;; [x] mortho
-;; [x] mperspective
-;; [x] nmtranslate
-;; [x] nmscale
-;; [x] nmrotate
-;; [x] m1norm
-;; [x] minorm
-;; [x] m2norm
-;; [x] nmswap-row
-;; [x] nmswap-col
-;; [x] mdiag
-;; [x] miref
-;; [x] mcref
-;; [x] msetf
-;; [x] mcol
-;; [x] mrow
-;; [x] mapply
-;; [x] mapplyf
