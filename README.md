@@ -1,3 +1,5 @@
+# This library has been superseded by [3d-math](https://shinmera.github.io/3d-math)
+
 ## About 3d-matrices
 This is a library implementing common matrix operations, mainly intended as the counterpiece to [3d-vectors](https://shinmera.github.io/3d-vectors) and thus being aimed at operations in 3D space. Still, it also implements other common matrix tasks such as LU and QR factorisation, determinant computation, and sub-matrix selection. 2x2, 3x3, and 4x4 matrices are specially treated and often have specifically optimised or inlined variants in the operations to ensure as high a speed as possible. NxM matrices are also available, but will always use a general algorithm in the operations.
 
