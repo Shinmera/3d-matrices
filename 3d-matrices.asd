@@ -4,9 +4,9 @@
   :author "Yukari Hafner <shinmera@tymoon.eu>"
   :maintainer "Yukari Hafner <shinmera@tymoon.eu>"
   :description "A utility library implementing 2x2, 3x3, 4x4, and NxN matrix functionality."
-  :homepage "https://Shinmera.github.io/3d-matrices/"
-  :bug-tracker "https://github.com/Shinmera/3d-matrices/issues"
-  :source-control (:git "https://github.com/Shinmera/3d-matrices.git")
+  :homepage "https://shinmera.com/docs/3d-matrices/"
+  :bug-tracker "https://shinmera.com/project/3d-matrices/issues"
+  :source-control (:git "https://shinmera.com/project/3d-matrices.git")
   :serial T
   :components ((:file "package")
                (:file "toolkit")
